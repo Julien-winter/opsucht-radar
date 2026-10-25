@@ -5,7 +5,11 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.Window;
 import android.view.View;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -14,6 +18,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
+import android.widget.FrameLayout;
 
 import org.json.JSONObject;
 
@@ -25,26 +30,46 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends Activity {
     private WebView webView;
     private SwipeRefreshLayout refreshLayout;
     private TextView offlineView;
+    private FrameLayout rootLayout;
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private boolean updateCheckStarted;
+    private boolean offlineFallbackAttempted;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_main);
+        rootLayout = findViewById(R.id.root_layout);
         refreshLayout = findViewById(R.id.refresh_layout);
         webView = findViewById(R.id.web_view);
         offlineView = findViewById(R.id.offline_view);
+
+        // Android 15 enforces edge-to-edge for targetSdk 35. Apply system-bar
+        // insets to the root so the website header never sits below the clock.
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout, (view, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(0, bars.top, 0, bars.bottom);
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(rootLayout);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
+        settings.setCacheMode(isNetworkAvailable() ? WebSettings.LOAD_DEFAULT : WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        settings.setAllowFileAccess(false);
+        settings.setAllowContentAccess(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setMediaPlaybackRequiresUserGesture(true);
@@ -61,9 +86,19 @@ public final class MainActivity extends Activity {
             }
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 offlineView.setVisibility(View.GONE);
+                offlineFallbackAttempted = false;
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) showOffline();
+                if (request.isForMainFrame()) {
+                    if (!offlineFallbackAttempted) {
+                        offlineFallbackAttempted = true;
+                        view.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+                        view.loadUrl(BuildConfig.RADAR_URL);
+                    } else showOffline();
+                }
+            }
+            @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse errorResponse) {
+                if (request.isForMainFrame() && errorResponse.getStatusCode() >= 500) showOffline();
             }
         });
 
@@ -88,6 +123,17 @@ public final class MainActivity extends Activity {
         refreshLayout.setRefreshing(false);
         offlineView.setVisibility(View.VISIBLE);
         offlineView.setOnClickListener(v -> webView.reload());
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager manager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        if (manager == null) return false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.net.Network network = manager.getActiveNetwork();
+            NetworkCapabilities capabilities = manager.getNetworkCapabilities(network);
+            return capabilities != null && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
+        }
+        return manager.getActiveNetworkInfo() != null && manager.getActiveNetworkInfo().isConnected();
     }
 
     @Override protected void onResume() { super.onResume(); if (refreshLayout != null) refreshLayout.setRefreshing(false); }
