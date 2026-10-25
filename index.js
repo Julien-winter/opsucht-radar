@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
 const crypto = require("node:crypto");
+const zlib = require("node:zlib");
 const { DatabaseSync } = require("node:sqlite");
 const { itemVariant } = require("./item-variant");
 
@@ -1214,7 +1215,12 @@ function authenticate(request,response){
   }
   const privateRoute=["/api/rules","/api/alerts","/api/settings","/api/webhook/test","/api/me/rules","/api/me/alerts","/api/me/webhook","/api/me/webhook/test","/api/me/minecraft","/api/me/minecraft/challenge","/api/me/minecraft/verify"].includes(pathname)||pathname.startsWith("/api/player-alerts");
   const authRoute=pathname.startsWith("/api/auth/");
-  const required=!authRoute&&(publicMode()&&(request.method!=="GET"||privateRoute)||Boolean(env("ADMIN_TOKEN"))&&(request.method!=="GET"||privateRoute));
+  // HEAD has the same read-only semantics as GET. Treating it as a write
+  // made public health checks and cache validators unexpectedly return 503
+  // when ADMIN_TOKEN was unset, even though the corresponding GET endpoint
+  // was public. Private routes remain protected for both methods.
+  const readOnly = request.method === "GET" || request.method === "HEAD";
+  const required=!authRoute&&(publicMode()&&(!readOnly||privateRoute)||Boolean(env("ADMIN_TOKEN"))&&(!readOnly||privateRoute));
   if(!required)return true;
   const user = userFromRequest(request);
   if (user && (pathname === "/api/me" || pathname.startsWith("/api/me/"))) return true;
@@ -1424,12 +1430,30 @@ function recordAuthFailure(key){
 function clearAuthFailures(key){authFailures.delete(key);}
 
 const typeForExt=new Map([[".html","text/html; charset=utf-8"],[".css","text/css; charset=utf-8"],[".js","text/javascript; charset=utf-8"],[".json","application/json; charset=utf-8"],[".webmanifest","application/manifest+json; charset=utf-8"],[".svg","image/svg+xml"],[".png","image/png"],[".ico","image/x-icon"]]);
+const compressibleTypes = new Set(["text/html; charset=utf-8","text/css; charset=utf-8","text/javascript; charset=utf-8","application/json; charset=utf-8","application/manifest+json; charset=utf-8","image/svg+xml"]);
 function serveFile(response,file,head=false){
   if(!fs.existsSync(file)||!fs.statSync(file).isFile()){jsonResponse(response,{error:"Not found"},404);return;}
-  const stat=fs.statSync(file),headers={"Content-Type":typeForExt.get(path.extname(file).toLowerCase())||"application/octet-stream","Content-Length":stat.size,"Cache-Control":file.endsWith(".html")?"no-cache":"public, max-age=300"};
+  const stat=fs.statSync(file),contentType=typeForExt.get(path.extname(file).toLowerCase())||"application/octet-stream";
+  const etag=`"${Math.floor(stat.mtimeMs).toString(16)}-${stat.size.toString(16)}"`;
+  const isHtml=file.endsWith(".html"),isServiceWorker=path.basename(file)==="sw.js";
+  const headers={"Content-Type":contentType,"ETag":etag,"Last-Modified":stat.mtime.toUTCString(),"Cache-Control":isHtml||isServiceWorker?"no-cache":"public, max-age=86400, stale-while-revalidate=604800"};
+  if(compressibleTypes.has(contentType))headers.Vary="Accept-Encoding";
   if (path.basename(file)==="sw.js") headers["Service-Worker-Allowed"]="/";
+  const ifNoneMatch=String(response.req?.headers?.["if-none-match"]||"");
+  const ifModifiedSince=Date.parse(String(response.req?.headers?.["if-modified-since"]||""));
+  if(ifNoneMatch.split(/\s*,\s*/).includes(etag)||(ifNoneMatch===""&&Number.isFinite(ifModifiedSince)&&Math.floor(stat.mtimeMs/1000)<=Math.floor(ifModifiedSince/1000))){response.writeHead(304,headers);response.end();return;}
+  const accept=String(response.req?.headers?.["accept-encoding"]||"");
+  let encoding="";
+  if(!head&&compressibleTypes.has(contentType)&&accept.includes("br"))encoding="br";
+  else if(!head&&compressibleTypes.has(contentType)&&/\bgzip\b/.test(accept))encoding="gzip";
+  if(encoding){headers["Content-Encoding"]=encoding;delete headers["Content-Length"];}
+  else headers["Content-Length"]=stat.size;
   response.writeHead(200,headers);
-  if(head){response.end();return;}const stream=fs.createReadStream(file);stream.on("error",()=>{if(!response.headersSent)jsonResponse(response,{error:"File unavailable"},500);else response.destroy();});stream.pipe(response);
+  if(head){response.end();return;}
+  const stream=fs.createReadStream(file);stream.on("error",()=>{if(!response.headersSent)jsonResponse(response,{error:"File unavailable"},500);else response.destroy();});
+  if(encoding==="br")stream.pipe(zlib.createBrotliCompress()).pipe(response);
+  else if(encoding==="gzip")stream.pipe(zlib.createGzip({level:zlib.constants.Z_BEST_SPEED})).pipe(response);
+  else stream.pipe(response);
 }
 
 async function handleRequest(request,response){

@@ -1,4 +1,6 @@
-const CACHE = 'opsucht-radar-shell-v1';
+// Bump this whenever the shell changes. Cache-first assets otherwise keep an
+// old app.js in Android WebViews and can hide new consent/UI fixes.
+const CACHE = 'opsucht-radar-shell-v2';
 const SHELL = [
   '/',
   '/static/index.html',
@@ -30,6 +32,14 @@ self.addEventListener('fetch', event => {
       caches.open(CACHE).then(cache => cache.put('/', copy));
       return response;
     }).catch(() => caches.match('/')));
+    return;
+  }
+  const asset = /\.(?:js|css|html|webmanifest|svg)$/i.test(url.pathname);
+  if (asset) {
+    event.respondWith(fetch(request).then(response => {
+      if (response.ok) { const copy = response.clone(); caches.open(CACHE).then(cache => cache.put(request, copy)); }
+      return response;
+    }).catch(() => caches.match(request)));
     return;
   }
   event.respondWith(caches.match(request).then(cached => cached || fetch(request).then(response => {
