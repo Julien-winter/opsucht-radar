@@ -1,0 +1,11 @@
+.market-cost-control{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:11px 0;padding:11px 12px;border:1px solid #31513f;border-radius:9px;background:#101e18}
+.market-cost-control>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.market-cost-control small{font-size:8px;letter-spacing:.6px;color:#94bca5}
+.market-cost-control b{font:600 15px 'Space Grotesk';color:#baf1d0}
+.market-cost-control button{flex:none;padding:8px 10px;font-size:10px}
+.custom-cost-control{margin:11px 0}
+.custom-cost-control input{width:100%}
+.custom-cost-control .use-market-price{margin-top:7px;padding:5px 0;color:#a8d8bd;font-size:10px}
+.rate-card .market-cost-control+.metric{border-top:1px solid var(--line)}
+.market-calculator{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:18px 0;padding:15px;border:1px solid #31513f;border-radius:9px;background:#101e18}.market-calculator>div{flex:1}.market-calculator label{display:flex;flex-direction:column;gap:6px;margin-top:8px}.market-calculator input{max-width:180px}.market-calculator .detail-fields{margin:0}.market-calculator small{color:#94bca5;font-size:9px;letter-spacing:.5px}.market-calculator b{font:600 16px 'Space Grotesk'}
+@media(max-width:700px){.market-cost-control{align-items:flex-start;flex-direction:column}.market-cost-control button{width:100%}.custom-cost-control .use-market-price{width:auto}}

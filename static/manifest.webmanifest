@@ -1,0 +1,15 @@
+{
+  "name": "OPSUCHT Radar",
+  "short_name": "OPSUCHT Radar",
+  "description": "Marktpreise, Auktionen, Itemwerte und Händlerkurse für OPSUCHT.",
+  "lang": "de",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1014",
+  "theme_color": "#0a1014",
+  "icons": [
+    {"src":"/static/opsucht-favicon.png","sizes":"256x256","type":"image/png","purpose":"any maskable"}
+  ]
+}

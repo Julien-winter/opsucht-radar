@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- The public radar currently supports HTTP by design. Keep cleartext
+         limited to the configured host in production deployments. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

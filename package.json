@@ -1,0 +1,17 @@
+{
+  "name": "opsucht-radar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Public OPSUCHT economy dashboard and always-on market collector",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test node-tests/*.test.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.27.0"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

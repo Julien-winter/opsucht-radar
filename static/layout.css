@@ -1,0 +1,361 @@
+@media(max-width:700px){
+  body{padding-bottom:env(safe-area-inset-bottom)}
+  aside{padding-top:max(12px,env(safe-area-inset-top));padding-bottom:10px}
+  nav button{min-height:42px;touch-action:manipulation}
+  input,select,button{font-size:16px}
+  .page-heading{padding-top:env(safe-area-inset-top)}
+  dialog{padding-bottom:max(18px,env(safe-area-inset-bottom))}
+  .dashboard-grid{grid-template-columns:1fr;gap:11px}
+  .overview-auction{gap:8px;padding:9px 2px}
+  .overview-item-icon{width:35px;height:35px}
+  .overview-item-price b{font-size:11px}
+  .spotlight-enchants{gap:6px}
+  .spotlight-enchant{padding:8px 9px;font-size:9px}
+  .value-trend.single-trend{align-items:flex-start;flex-direction:column}
+  .value-card-head .tag{max-width:84px;white-space:normal;text-align:center;line-height:1.25}
+}
+
+/* Responsive finishing layer
+   Keeps dense market data usable on narrow screens and wide monitors. */
+:root{
+  --content-gutter:clamp(15px,3.2vw,48px);
+  --touch-target:44px;
+}
+
+html,body{max-width:100%;overflow-x:hidden}
+body{min-height:100vh}
+main{min-height:100vh;display:flex;flex-direction:column}
+main>footer{margin-top:auto}
+main,.page,.card,.hero-card,.overview-grid>*,.dashboard-grid>*,.auction-grid>*,.value-grid>*,.abc-grid>*{min-width:0}
+img,svg,video,canvas{max-width:100%}
+
+/* Use the whole area beside the fixed sidebar on wide desktops.  The old
+   max-width on `main` left a large, empty strip on high-DPI/zoomed displays
+   (the browser viewport is wider in CSS pixels than the screenshot). */
+main{width:calc(100% - 240px);max-width:none}
+button,a,input,select{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+
+/* Prevent cramped two-column cards on medium laptop/tablet widths. */
+@media (max-width:1200px){
+  main{padding-inline:clamp(20px,3vw,32px)}
+  .overview-grid,.dashboard-grid{grid-template-columns:1fr}
+  .overview-grid .card,.dashboard-grid .card{min-width:0}
+  .merchant-controls{grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) minmax(220px,2fr)}
+  .auction-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .abc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* Sidebar can remain fixed until there is no room for its content. */
+@media (max-width:1050px) and (min-width:901px){
+  /* style.css narrows the sidebar to 200px at this width. Keep the main
+     column in lockstep so the right edge remains flush with the viewport. */
+  main{width:calc(100% - 200px)}
+}
+
+@media (max-width:900px) and (min-width:701px){
+  aside{width:190px;padding-inline:12px}
+  main{margin-left:190px;width:calc(100% - 190px);padding-inline:20px}
+  .brand{gap:9px;font-size:17px}
+  nav button{padding:12px 9px;font-size:13px}
+  .page-heading{align-items:flex-start;flex-wrap:wrap}
+  .page-heading>div{min-width:0;flex:1 1 320px}
+  .page-heading>button{flex:none}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .merchant-controls{grid-template-columns:1fr 1fr}
+  .merchant-controls>input{grid-column:1/-1}
+  .market-summary,.merchant-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .market-summary>*:last-child,.merchant-summary>*:last-child{grid-column:1/-1}
+}
+
+@media (max-width:700px){
+  body{font-size:13px}
+  /* Android WebViews can report a zero safe-area inset while drawing
+     edge-to-edge. Reserve a small physical top gutter as a fallback so the
+     status-bar clock never sits on top of the OPSUCHT logo. */
+  aside{width:100%;max-width:100%;padding-top:max(30px,env(safe-area-inset-top,0px));}
+  .brand{min-height:42px;align-items:center;line-height:1.15;}
+  .brand .mark,.brand-mark{width:36px;height:36px;object-fit:contain;}
+  .brand span:not(.mark){white-space:nowrap;}
+  nav{scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x proximity;}
+  nav::-webkit-scrollbar{display:none;}
+  nav button{flex:0 0 auto;scroll-snap-align:start;min-height:44px;}
+  main{width:100%;margin-left:0;padding-inline:var(--content-gutter)}
+  main{min-height:calc(100vh - 1px)}
+  header{min-height:60px;height:auto;padding:10px 0;gap:10px}
+  .breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .live-badge{flex:none;white-space:nowrap}
+  .page-heading{display:flex;flex-wrap:wrap;gap:12px;margin-block:20px 17px}
+  .page-heading>div{flex:1 1 220px;min-width:0}
+  .page-heading>button{min-height:var(--touch-target);flex:none}
+  .page-heading h1{font-size:clamp(24px,8vw,30px);overflow-wrap:anywhere}
+  .page-heading p{max-width:100%;overflow-wrap:anywhere}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .stat{min-height:96px}
+  .stat b{overflow-wrap:anywhere}
+  .card,.hero-card{max-width:100%;overflow:hidden}
+  .card-head{align-items:flex-start;flex-wrap:wrap}
+  .card-head>button,.card-head>.tag{margin-left:auto}
+  .toolbar{width:100%;align-items:stretch}
+  .toolbar>*{min-width:0}
+  .toolbar .muted{width:100%;text-align:right}
+  .market-summary,.merchant-summary{grid-template-columns:1fr 1fr;gap:7px}
+  .market-summary>*:last-child,.merchant-summary>*:last-child{grid-column:1/-1}
+  .market-stat{min-width:0;overflow:hidden}
+  .market-stat>b,.merchant-summary-card b{overflow-wrap:anywhere}
+  .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-wrap table{min-width:680px}
+  /* Market rows become readable cards on phones instead of forcing a wide
+     table that gets cut off at the right edge. Other data tables keep their
+     horizontal scroll because their columns are genuinely tabular. */
+  #market .table-wrap{overflow:visible}
+  #market .table-wrap table{display:block;min-width:0;width:100%;white-space:normal}
+  #market .table-wrap thead{display:none}
+  #market .table-wrap tbody{display:grid;gap:10px;padding:10px}
+  #market .table-wrap tr{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;background:#101a21;overflow:hidden}
+  #market .table-wrap td{display:block;padding:11px 12px;border-top:1px solid #22313a;min-width:0;overflow-wrap:anywhere}
+  #market .table-wrap td:first-child{grid-column:1/-1;border-top:0;padding-bottom:9px}
+  #market .table-wrap td:nth-child(2){font-size:10px;color:var(--muted)}
+  #market .table-wrap td:nth-child(3),#market .table-wrap td:nth-child(4){font-size:11px}
+  #market .table-wrap td:nth-child(5){grid-column:1/-1;font-size:10px;color:var(--muted)}
+  .auction-grid,.value-grid,.abc-grid{grid-template-columns:1fr;min-width:0}
+  .auction-card,.value-card,.abc-card{width:100%;min-width:0}
+  .auction-card .bottom{flex-wrap:wrap}
+  .merchant-controls{grid-template-columns:1fr;gap:8px}
+  .merchant-controls>input{grid-column:auto}
+  .merchant-controls label,.merchant-controls input,.merchant-controls select{width:100%;min-width:0}
+  .detail-fields,.two-fields{grid-template-columns:1fr;min-width:0}
+  .rule-row .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .rule-row .actions button{min-height:var(--touch-target)}
+  dialog{width:min(94vw,850px);max-width:94vw;max-height:90dvh;margin:auto;padding:18px 14px}
+  .detail-actions{display:grid;grid-template-columns:1fr;gap:8px}
+  .detail-actions button{min-height:var(--touch-target)}
+  #toast{right:12px;bottom:12px;left:12px;max-width:none}
+  footer{gap:12px;flex-wrap:wrap}
+}
+
+@media (max-width:380px){
+  .stats,.market-summary{grid-template-columns:1fr}
+  .market-summary>*:last-child{grid-column:auto}
+  .brand{gap:7px}
+  .brand span:not(.mark){letter-spacing:1px}
+  nav button{padding-inline:8px}
+  .auction-stats{grid-template-columns:1fr}
+  .auction-hero-prices{grid-template-columns:1fr}
+  .auction-hero-prices>div:last-child{grid-column:auto}
+}
+
+/* Motion stays subtle and can be disabled by the user's OS preference. */
+@keyframes radar-pulse{0%,100%{opacity:.72}50%{opacity:1}}
+.live-badge{animation:radar-pulse 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important;
+  }
+  .page{animation:none!important}
+  button:hover,.auction-card:hover,.value-card:hover{transform:none!important}
+}
+
+@media (forced-colors:active){
+  button,input,select,.card,.hero-card,.auction-card,.value-card{border:1px solid CanvasText}
+  .live-badge,.tag{border-color:CanvasText;color:CanvasText}
+}
+
+/* Dashboard polish: denser overview panels with clearer visual hierarchy. */
+#overview{position:relative;isolation:isolate}
+/* Keep the ambient glow inside the overview stacking context. A negative
+   z-index here used to place the pseudo-element behind the page/body stack;
+   on some viewport sizes that produced a clipped coloured strip under the
+   sticky header. */
+#overview::before{content:'';position:absolute;inset:0 0 auto;height:220px;pointer-events:none;z-index:0;opacity:.72;background:radial-gradient(ellipse at 14% 0%,#2d705044,transparent 58%),radial-gradient(ellipse at 91% 8%,#263e6b22,transparent 48%);mask-image:linear-gradient(to bottom,#000 0%,#000b 45%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000b 45%,transparent 100%)}
+#overview>*{position:relative;z-index:1}
+#overview .stats{grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch}
+#overview .stat{min-height:126px;display:flex;flex-direction:column;justify-content:center;border-top:2px solid #355345;transition:transform .18s,border-color .18s,box-shadow .18s}
+#overview .stat:nth-child(2){border-top-color:#3b5665}
+#overview .stat:nth-child(3){border-top-color:#5d4e68}
+#overview .stat:nth-child(4){border-top-color:#765f3f}
+#overview .stat:hover{transform:translateY(-2px);border-color:#5b8c75;box-shadow:0 12px 32px #00000035}
+#overview .stat b{font-variant-numeric:tabular-nums}
+#overview .stat span{display:flex;align-items:center;gap:6px}
+#overview .stat span::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px #59e4ad12}
+#overview .overview-grid{grid-template-columns:minmax(0,1.22fr) minmax(300px,.78fr);align-items:stretch}
+#overview .hero-card{min-height:230px;display:flex;flex-direction:column;justify-content:center}
+#overview .hero-card .primary{align-self:flex-start}
+#overview .overview-grid>.card{min-height:230px}
+#overview .overview-grid>.card .note{margin-top:13px}
+#overview .dashboard-grid{grid-template-columns:minmax(0,1.28fr) minmax(280px,.72fr);align-items:start;gap:16px}
+#overview .dashboard-grid{align-items:stretch}
+#overview .dashboard-grid>.card{height:auto;min-height:0;align-self:stretch}
+#overview .dashboard-grid>.card:first-child{border-top:2px solid #315f4c}
+#overview .dashboard-grid>.card:last-child{border-top:2px solid #584067}
+#overview .dashboard-grid .card-head{margin-bottom:12px}
+#overview .overview-auction-list{gap:0}
+#overview .overview-auction{min-height:55px;padding:8px 4px}
+#overview .overview-auction:first-child{background:linear-gradient(90deg,#16322955,transparent 80%);border-radius:8px}
+#overview .overview-auction:hover{background:#18282d}
+#overview .overview-item-price b{font-size:13px}
+#overview .spotlight-enchants{min-height:0;gap:7px}
+#overview .spotlight-enchant{padding:8px 10px;transition:transform .16s,background .16s,border-color .16s}
+#overview .spotlight-enchant:hover{transform:translateY(-1px)}
+#overview>article.card:last-child{margin-top:0;border-top:2px solid #3d5360}
+#overview .public-shortcuts{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+#overview .public-shortcuts button{min-height:58px;display:flex;align-items:center;gap:7px;padding:11px 12px;font-size:11px;line-height:1.35}
+
+@media (max-width:1200px){
+  #overview .overview-grid{grid-template-columns:1fr 1fr}
+  #overview .dashboard-grid{grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr)}
+  #overview .public-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  #overview .overview-grid,#overview .dashboard-grid{grid-template-columns:1fr}
+  #overview .overview-grid>.card,#overview .hero-card{min-height:0}
+  #overview .public-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* Keep the overview content anchored to the available viewport width. Older
+   rules used a desktop max-width, which left a distracting empty strip on
+   wide screens beside the dashboard cards. */
+@media (min-width:1051px){
+  main{width:calc(100% - 240px);max-width:none}
+}
+@media (max-width:700px){
+  #overview::before{inset:0;height:170px}
+  #overview .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #overview .stat{min-height:104px;padding:14px}
+  #overview .stat b{font-size:23px}
+  #overview .hero-card{min-height:205px}
+  #overview .public-shortcuts{grid-template-columns:1fr}
+  #overview .public-shortcuts button{min-height:48px}
+}
+
+/* Visual refresh: a quiet radar-like surface with stronger hierarchy. */
+body{
+  isolation:isolate;
+  background:
+    radial-gradient(700px 420px at 7% -8%,#2b6b5038,transparent 68%),
+    radial-gradient(620px 460px at 98% 26%,#1e4f6d20,transparent 70%),
+    linear-gradient(145deg,#091015 0%,#0b1318 48%,#091015 100%);
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  opacity:.22;
+  background-image:
+    linear-gradient(90deg,#7feac112 1px,transparent 1px),
+    linear-gradient(#7feac10d 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:linear-gradient(to bottom,black,transparent 82%);
+}
+
+/* Keep data panels visually connected while preserving a cheap paint path. */
+.card,.stat,.hero-card,.auction-card,.value-card,.rate-card,.abc-card{
+  background-image:
+    linear-gradient(145deg,#ffffff04,transparent 32%),
+    linear-gradient(155deg,#141f27,#0f171d);
+  box-shadow:inset 0 1px #ffffff08,0 8px 28px #00000018;
+}
+.stat,.card,.auction-card,.value-card,.rate-card,.abc-card{position:relative}
+.stat::before,.card::before,.auction-card::before,.value-card::before,.rate-card::before,.abc-card::before{
+  content:"";
+  position:absolute;
+  inset:0 18% auto 0;
+  height:1px;
+  pointer-events:none;
+  background:linear-gradient(90deg,#72e9bb3d,transparent);
+}
+.card-head h2,.stat b,.auction-card .item-name b,.value-title h3,.abc-card-head h3{letter-spacing:-.2px}
+
+/* The hero gets an ambient radar ring instead of a large decorative glyph. */
+.hero-card:after{
+  content:"";
+  width:190px;
+  height:190px;
+  right:-34px;
+  top:-54px;
+  border:1px solid #73e7b31c;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,#6ce5b312 0 17%,transparent 18% 39%,#6ce5b30c 40% 41%,transparent 42%);
+  box-shadow:0 0 0 19px #6ce5b308,0 0 0 38px #6ce5b304;
+}
+
+@media (hover:hover){
+  .card:hover,.stat:hover,.value-card:hover,.rate-card:hover,.abc-card:hover{
+    border-color:#3b5660;
+    box-shadow:inset 0 1px #ffffff0b,0 12px 34px #00000026;
+  }
+  .stat:hover{transform:translateY(-1px)}
+  .public-shortcuts button:hover{transform:translateY(-1px);border-color:#41685b}
+}
+
+/* Make the live state and controls easier to scan at a glance. */
+.live-badge{box-shadow:0 0 0 3px #69e8b30a,inset 0 1px #ffffff0a}
+.toolbar>input,.toolbar>select{box-shadow:inset 0 1px #ffffff08}
+.table-wrap thead th:first-child{border-top-left-radius:10px}
+.table-wrap thead th:last-child{border-top-right-radius:10px}
+
+@media (max-width:700px){
+  body::before{background-size:56px 56px;opacity:.13}
+  .card,.stat,.hero-card,.auction-card,.value-card,.rate-card,.abc-card{box-shadow:inset 0 1px #ffffff08,0 5px 18px #00000018}
+  .hero-card:after{width:130px;height:130px;right:-38px;top:-26px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  body::before{display:none}
+  .stat:hover,.public-shortcuts button:hover{transform:none}
+}
+
+/* Desktop overview tuning: keep the dashboard cards content-sized so a short
+   specialty list does not create a large, empty panel. Reduce the outer
+   gutter on wide screens so the data area reaches the available viewport. */
+@media (min-width:1201px){
+  main{padding-right:clamp(16px,1.8vw,28px)}
+  #overview .dashboard-grid{align-items:start}
+  #overview .dashboard-grid>.card{align-self:start;height:auto;min-height:0}
+  #overview .dashboard-grid>.card:last-child{height:fit-content}
+}
+
+/* Keep the special-enchantment panel in the same OPSUCHT teal family as the
+   rest of the dashboard. Purple accents made the panel look detached from
+   the surrounding live data cards. */
+#overview .dashboard-grid>.card:last-child{border-top-color:#397761}
+#overview .spotlight-enchant{border-color:#2f5b4c;background:#12241f;color:#c4efdd}
+#overview .spotlight-enchant b{color:#69e8b3}
+#overview .spotlight-enchant:hover{background:#18352b;border-color:#4a9578}
+#overview .dashboard-grid .section-subtitle{font-size:10px;color:#9aafb5}
+#overview .overview-auction-list{max-height:360px;overflow:auto;scrollbar-width:thin}
+#overview .spotlight-enchants{max-height:250px;overflow:auto;scrollbar-width:thin}
+#overview .overview-grid>.card .card-head h2,
+#overview .dashboard-grid>.card .card-head h2{color:#e3edf0}
+#overview .overview-grid>.card .metric{padding-block:12px;font-size:11px}
+#overview .overview-grid>.card .metric b{color:#dce9ec;font-variant-numeric:tabular-nums}
+#overview .overview-grid>.card .note{font-size:10px;color:#9eb0b7;line-height:1.65}
+#overview .dashboard-grid>.card{padding:20px 22px}
+#overview .hero-card p{color:#b5c7c9;line-height:1.65}
+@media (max-width:700px){
+  #overview .dashboard-grid>.card{padding:17px}
+  #overview .overview-grid>.card .note{font-size:10px}
+}
+
+/* Unified accent palette for dashboard statistic cards. */
+#overview .stats .stat{
+  --stat-accent:#55d9ad;
+  border-top:2px solid color-mix(in srgb,var(--stat-accent) 58%,#243541);
+  background:radial-gradient(120px 80px at 100% 0%,color-mix(in srgb,var(--stat-accent) 10%,transparent),transparent 72%),linear-gradient(145deg,#141f27,#10171d);
+}
+#overview .stats .stat:nth-child(2){--stat-accent:#62d6c0}
+#overview .stats .stat:nth-child(3){--stat-accent:#69cbbd}
+#overview .stats .stat:nth-child(4){--stat-accent:#7ac9b2}
+#overview .stats .stat::after{border-color:color-mix(in srgb,var(--stat-accent) 20%,transparent);box-shadow:0 0 0 12px color-mix(in srgb,var(--stat-accent) 7%,transparent),0 0 0 25px color-mix(in srgb,var(--stat-accent) 4%,transparent)}
+#overview .stats .stat span{color:color-mix(in srgb,var(--stat-accent) 82%,#d8eee8)}
+#overview .stats .stat:hover{border-color:color-mix(in srgb,var(--stat-accent) 66%,#3b5660)}
+@supports not (color:color-mix(in srgb,white,black)){
+  #overview .stats .stat{border-top-color:#3b8069;background:linear-gradient(145deg,#141f27,#10171d)}
+  #overview .stats .stat::after{border-color:#59e4ad24;box-shadow:0 0 0 12px #59e4ad08,0 0 0 25px #59e4ad05}
+  #overview .stats .stat span{color:#69e8b3}
+}

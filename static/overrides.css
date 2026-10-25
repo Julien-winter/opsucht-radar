@@ -1,0 +1,172 @@
+/* Cleaner spacing, faster scanning and richer merchant cards. */
+.toolbar label:not(.check){min-width:145px}.toolbar>select{min-width:150px}
+#auction-grid .auction-card{position:relative;overflow:hidden}.auction-card .item-name b{font-size:14px}.auction-card .bottom span:last-child{white-space:nowrap}
+.table-wrap{max-height:72vh}.table-wrap thead{position:sticky;top:0;z-index:2}.table-wrap tbody tr:nth-child(even){background:#131c24}.table-wrap tbody tr:hover{background:#192721}
+.item-name small{max-width:270px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat{position:relative;overflow:hidden}.stat:after{content:'';position:absolute;width:80px;height:80px;right:-28px;top:-34px;border:1px solid #59e4ad24;border-radius:50%;box-shadow:0 0 0 12px #59e4ad08,0 0 0 25px #59e4ad05}
+.hero-card{position:relative;overflow:hidden}.hero-card:after{content:'◈';position:absolute;right:28px;top:24px;color:#59e4ad10;font:150px 'Space Grotesk';pointer-events:none}.hero-card>*{position:relative;z-index:1}
+.rate-card{padding:18px;cursor:default;min-width:0}.rate-card:hover{border-color:#3c6053}.rate-title{display:flex;align-items:center;gap:14px;margin-bottom:19px;min-width:0}.rate-title>div:last-child{min-width:0;overflow:hidden}.rate-title h3{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rate-title .tag{display:inline-block;margin-top:7px}.rate-icon{width:58px;height:58px;border-radius:13px;border:1px solid #31404a;background:radial-gradient(circle at 35% 30%,#324838,#1a2523 72%);display:grid;place-items:center;flex:none}.rate-icon img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 4px 5px #0008)}
+.rate-yield{display:flex;justify-content:space-between;align-items:center;border-block:1px solid var(--line);padding:13px 0;margin-bottom:16px}.rate-yield span{font-size:9px;letter-spacing:1px;color:var(--muted)}.rate-yield>b{color:var(--green);font:600 20px 'Space Grotesk'}.rate-yield small{font:10px 'DM Sans';color:var(--muted)}.rate-card .rate-input{width:100%;padding:10px}.rate-card .metric{font-size:11px;padding:10px 0}.rate-card .metric b{font-family:'Space Grotesk';font-size:11px}
+.auction-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.auction-stat{display:grid;grid-template-columns:36px 1fr;grid-template-rows:auto auto;column-gap:12px;align-items:center;padding:15px 17px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(120deg,#131d25,#10161d)}.auction-stat>span{grid-row:1/3;color:var(--green);font-size:21px}.auction-stat>b{font:600 21px 'Space Grotesk'}.auction-stat>small{color:var(--muted);font-size:10px}.auction-price-row{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin:13px 0}.auction-price-row>div>small,.auction-hero-prices small{color:var(--muted);font-size:9px;letter-spacing:.8px}.auction-price-row .price{font-size:22px;margin:5px 0 0}.time-left{font-size:10px;color:#bac8d3;white-space:nowrap}.buy-line{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;margin:9px 0;border-radius:7px;background:#143027;color:var(--green);font-size:11px}.buy-line b{font-size:12px}.enchant-chips{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}.enchant-chips span{border:1px solid #514266;background:#261f31;color:#d6b5fb;border-radius:5px;padding:4px 7px;font-size:9px}.value-line{margin:10px 0}.auction-detail-head{display:flex;align-items:center;gap:16px;margin:16px 0 22px}.auction-detail-head>img{width:66px;height:66px;object-fit:contain;image-rendering:pixelated;background:#1a242d;border-radius:11px;padding:8px}.auction-detail-head h2{margin-top:5px}.auction-detail-head p{margin:5px 0;font-size:11px}.auction-hero-prices{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:10px;padding:17px;background:linear-gradient(120deg,#14241f,#131a22);border:1px solid #29463b;border-radius:11px}.auction-hero-prices>div{display:flex;flex-direction:column;gap:8px;min-width:0}.auction-hero-prices b{font:600 19px 'Space Grotesk';overflow-wrap:anywhere}.auction-hero-prices span{color:var(--muted);font-size:10px}.buy-price{color:var(--green)}.detail-fields>div{display:flex;flex-direction:column;gap:7px}.detail-fields>div b{font:500 12px 'Space Grotesk';overflow-wrap:anywhere}.detail-section-title{margin:25px 0 13px}.enchant-list,.bid-list{padding:0 15px;background:#0e151c;border:1px solid var(--line);border-radius:10px}.enchant-list>div,.bid-row{display:flex;align-items:center;gap:12px;padding:13px 3px;border-bottom:1px solid #252f39}.enchant-list>div:last-child,.bid-row:last-child{border:0}.enchant-list>div span{color:#d6b5fb}.enchant-list>div b{margin-left:auto}.bid-rank{width:27px;color:var(--muted);font-size:10px}.bid-player{flex:1;min-width:0}.bid-player small{display:block;margin-top:4px;color:var(--muted);font:10px monospace;overflow-wrap:anywhere}.bid-row> b{white-space:nowrap;font:500 13px 'Space Grotesk'}.bid-row.highest{color:var(--green)}.bid-row.highest .bid-rank{color:var(--green)}.detail-actions{display:flex;gap:10px;margin-top:16px}.detail-actions button{flex:1}
+.value-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.value-card{padding:21px;background:var(--panel);border:1px solid var(--line);border-radius:12px;transition:border-color .18s,transform .18s;min-width:0}.value-card:hover{border-color:#4d7865;transform:translateY(-2px)}.value-card-head{display:flex;align-items:center;gap:13px;min-width:0}.value-icon{width:54px;height:54px;flex:none;display:grid;place-items:center;border-radius:11px;background:#1a252d;border:1px solid #2c3a42}.value-icon img{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}.value-title{min-width:0;flex:1}.value-title h3{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}.value-title small{display:block;margin-top:6px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.5px}.value-card-head .tag{font-size:7px}.value-description{min-height:39px;max-height:54px;overflow:hidden;margin:15px 0 8px;font-size:11px;line-height:1.7;color:#aab8c4}.value-card .enchant-chips{min-height:25px}.value-numbers{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:13px}.value-numbers>div{display:flex;flex-direction:column;gap:7px;min-width:0}.value-numbers small{font-size:8px;letter-spacing:.7px;color:var(--muted);line-height:1.4}.value-numbers b{font:600 15px 'Space Grotesk';overflow-wrap:anywhere}.value-foot{display:flex;justify-content:space-between;gap:8px;margin-top:13px;color:var(--muted);font-size:9px}.value-foot span:last-child{color:var(--green);white-space:nowrap}
+.player-avatar-slot{display:inline-flex;flex:none}.player-avatar{width:33px;height:33px;flex:none;display:inline-grid;place-items:center;overflow:hidden;border-radius:8px;background:#1b2630;border:1px solid #33414b;color:#a9bac8;font:bold 12px 'Space Grotesk'}.player-avatar img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}.player-avatar.skin-head{background-size:512px 512px;background-position:-64px -64px;background-repeat:no-repeat}.player-avatar-fallback{background:linear-gradient(145deg,#243c43,#29243b)}.bid-row .player-name{font-size:12px}.seller-profile{min-width:0}.seller-profile-row{display:flex;align-items:center;gap:9px}.seller-profile code{font-size:9px;color:var(--muted);overflow-wrap:anywhere}
+.category-filter{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:4px 0 15px}.filter-chip{display:inline-flex;align-items:center;gap:8px;background:#111922;color:#aab8c4;border:1px solid #273440;border-radius:999px;padding:9px 14px;font-size:11px;white-space:nowrap}.filter-chip small{display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:#1d2934;color:#a3b3c1;font-size:9px}.filter-chip.active{background:#19372e;border-color:#39775e;color:var(--green)}.filter-chip.active small{background:#265841;color:#d4f8e8}.category-subfilters{margin-top:-5px;margin-bottom:17px;padding:0 0 0 14px;border-left:2px solid #2a4439}.category-subfilters .filter-chip{background:#0e151c;padding:7px 11px;font-size:10px}.category-subfilters .filter-chip.active{background:#1a2d27}
+.category-tertiaries{margin-top:-13px;margin-bottom:18px;padding:0 0 0 22px;border-left:2px solid #2a4439}.facet-label{font-size:8px;letter-spacing:1.4px;color:var(--muted);margin-right:2px}.category-tertiaries .filter-chip{padding:6px 10px;font-size:9px;background:#0c1319}.category-tertiaries .filter-chip.active{background:#243423;border-color:#778846;color:#d9eb8c}
+.enchant-filter-bar{margin:2px 0 18px;padding:11px 13px;border:1px solid #352c44;border-radius:10px;background:#14121a;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.enchant-filter-bar .facet-label{color:#c0a0e6;flex:none}.enchant-filter-chip{background:#201a28;border-color:#40334e;color:#cdb8e5;padding:7px 11px;font-size:10px;flex:none}.enchant-filter-chip small{background:#30243c;color:#d9c4f0}.enchant-filter-chip.active{background:#352445;border-color:#a270ca;color:#f0d9ff}.enchant-filter-chip.active small{background:#63437a;color:white}
+.enchant-search{display:flex;align-items:center;margin:8px 0 7px}.enchant-search label{width:min(100%,390px);font-size:9px;letter-spacing:.7px;text-transform:uppercase;color:#c0a0e6}.enchant-search input{margin-top:7px;width:100%;font-size:12px;letter-spacing:normal;text-transform:none;background:#14121a;border-color:#443650}
+.market-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:13px 0}.market-stat{display:flex;align-items:baseline;gap:9px;padding:14px 16px;border:1px solid var(--line);border-radius:9px;background:#111922}.market-stat>b{font:600 20px 'Space Grotesk';color:var(--green)}.market-stat>span{color:var(--muted);font-size:10px}.merchant-intro{padding:25px 28px;border-radius:13px;background:radial-gradient(ellipse at 80% 0%,#32614a55,transparent 60%),linear-gradient(120deg,#14221e,#111820);border:1px solid #29483a}.merchant-intro h2{font-size:25px;margin:10px 0 3px}.merchant-intro p{max-width:720px;margin:7px 0 0;font-size:12px}.merchant-controls{display:grid;grid-template-columns:180px 180px minmax(180px,1fr);gap:12px;align-items:end;margin:18px 0}.merchant-controls input,.merchant-controls select{width:100%}.merchant-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:14px 0 20px}.merchant-summary-card{display:flex;align-items:center;gap:12px;min-width:0;padding:15px;background:#111922;border:1px solid var(--line);border-radius:10px}.summary-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#1b3028;color:var(--green);font-size:18px;flex:none}.merchant-summary-card>div{display:flex;flex-direction:column;gap:5px;min-width:0}.merchant-summary-card small{font-size:8px;letter-spacing:.8px;color:var(--muted)}.merchant-summary-card b{font:600 14px 'Space Grotesk';overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rate-card.best-rate{border-color:#4a8a69;box-shadow:inset 0 0 0 1px #4a8a6933,0 9px 30px #193b2a30}.rate-card.best-rate .rate-title .tag{color:#d1ffe8;background:#19442e;border-color:#367452}.rate-card .metric{padding:12px 0}.rate-card .metric:last-of-type{border-bottom:1px solid var(--line)}
+
+@media(max-width:380px){
+  .market-summary{grid-template-columns:1fr}
+  .market-stat:last-child{grid-column:auto}
+  .merchant-controls{grid-template-columns:1fr}
+  .merchant-controls>input{grid-column:auto}
+}
+.rule-row{gap:22px}.rule-row>div:first-child{min-width:0}.rule-row small{line-height:1.9}.rule-row .actions button{padding:8px 11px;font-size:11px}#rule-form select{width:100%}#rule-form input[type=number]{font-variant-numeric:tabular-nums}
+.overview-grid>.card{min-width:0}.card-head{gap:12px}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:2px}.nav-label{line-height:1.8}#more-auctions{display:block;margin:18px auto}.chart{display:block}#settings-form .two-fields{margin-bottom:16px}#settings-form .note{max-width:760px}#test-webhook{margin-top:15px}
+@media(max-width:1150px){main{padding-inline:25px}.auction-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rule-row{align-items:flex-start;flex-direction:column}.rule-row .actions{flex-wrap:wrap}}
+@media(max-width:1000px){.value-grid{grid-template-columns:1fr}.merchant-controls{grid-template-columns:1fr 1fr}.merchant-controls>input{grid-column:1/-1}}
+@media(max-width:700px){.toolbar{align-items:stretch}.toolbar>input,.toolbar>select{width:100%;min-width:100%}.toolbar label:not(.check){width:100%}.toolbar .check{padding:8px 0}.category-filter{flex-wrap:nowrap;overflow-x:auto;padding:3px 2px 9px;scrollbar-width:thin}.category-subfilters{padding-left:8px}.filter-chip{padding:8px 11px;font-size:10px}.market-summary{grid-template-columns:1fr 1fr}.market-stat:last-child{grid-column:1/-1}.market-stat{padding:11px}.market-stat>b{font-size:17px}.merchant-intro{padding:20px}.merchant-intro h2{font-size:22px}.merchant-controls{grid-template-columns:1fr 1fr;gap:9px}.merchant-controls>input{grid-column:1/-1}.merchant-summary{grid-template-columns:1fr;gap:8px}.merchant-summary-card{padding:12px}.table-wrap{max-height:65vh}.rate-icon{width:52px;height:52px}.rate-icon img{width:36px;height:36px}.rate-card{padding:17px}.rule-row .actions{width:100%}.page-heading .secondary{white-space:nowrap}.live-badge{font-size:8px}.hero-card:after{right:8px;top:30px;font-size:100px}.stat:after{right:-40px}.detail-fields{gap:9px}.auction-card .bottom{font-size:9px}.auction-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.auction-stat{padding:12px}.auction-stat>b{font-size:18px}.auction-hero-prices{grid-template-columns:1fr 1fr}.auction-hero-prices>div:last-child{grid-column:1/-1;padding-top:10px;border-top:1px solid var(--line)}.auction-hero-prices b{font-size:16px}.auction-detail-head>img{width:55px;height:55px}.detail-actions{flex-direction:column}.bid-row{gap:7px}.time-left{white-space:normal;text-align:right;max-width:100px}.value-card{padding:16px}.value-card-head .tag{display:none}.value-icon{width:47px;height:47px}.value-icon img{width:37px;height:37px}.value-numbers{gap:7px}.value-numbers b{font-size:13px}.value-foot{font-size:8px}}
+
+/* Mobile filters stay touch-scrollable without adding a second visible
+   scrollbar or widening the page. The first chip remains aligned with the
+   content gutter and each chip snaps cleanly into view. */
+@media(max-width:700px){
+  .category-filter,.enchant-filter-bar{max-width:100%;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none;-ms-overflow-style:none}
+  .category-filter::-webkit-scrollbar,.enchant-filter-bar::-webkit-scrollbar{display:none}
+  .category-filter .filter-chip,.enchant-filter-bar .filter-chip{scroll-snap-align:start;flex:0 0 auto}
+  .category-filter:before{flex:0 0 auto}
+  .page:not(#overview) .card-head{margin-bottom:14px}
+  .page:not(#overview) .note{line-height:1.55}
+}
+.auction-grid>.auction-card,
+.value-grid>.value-card,
+.abc-grid>.abc-card,
+.merchant-grid>.rate-card{
+  contain:layout paint;
+  content-visibility:auto;
+  contain-intrinsic-size:260px;
+}
+.table-wrap{contain:layout paint}
+@media (max-width:700px){
+  aside,header{backdrop-filter:blur(8px)}
+}
+@media (prefers-reduced-transparency:reduce){
+  aside,header{backdrop-filter:none;background:#0c1217f5}
+  dialog::backdrop{backdrop-filter:none}
+}
+
+/* Shared polish for the secondary data pages. Dense feeds stay scannable on
+   desktop and collapse cleanly on phones; empty filters receive a clear,
+   consistent affordance instead of a blank panel. */
+.page:not(#overview){min-width:0}
+.page:not(#overview)>.note{max-width:900px;margin:8px 0 18px}
+.page:not(#overview) .toolbar{padding:10px;border:1px solid #24343d;border-radius:11px;background:linear-gradient(110deg,#111b22,#0f171d);box-shadow:inset 0 1px #ffffff06}
+.page:not(#overview) .toolbar>input{background:#0c141b;border-color:#2b3b45}
+.page:not(#overview) .toolbar>input::placeholder{color:#718595}
+.page:not(#overview) .toolbar>select{background:#0e171e}
+.page:not(#overview) .toolbar>.muted{font-variant-numeric:tabular-nums;color:#a6bac5}
+.page:not(#overview) .category-filter{margin-bottom:14px}
+.empty{display:grid;place-items:center;gap:8px;min-height:150px;padding:32px 22px;border:1px dashed #30424d;border-radius:11px;background:linear-gradient(140deg,#121d24,#10171d);color:#9aabb8;text-align:center;line-height:1.7}
+.empty::before{content:'⌕';display:grid;place-items:center;width:34px;height:34px;border:1px solid #3a5f54;border-radius:50%;color:#69e8b3;font:20px 'Space Grotesk';background:#173027}
+.table-empty{padding:38px 20px!important;color:#9aabb8;text-align:center;white-space:normal!important}
+.table-empty::before{content:'⌕';display:block;margin:0 auto 8px;color:#69e8b3;font-size:20px}
+.market-calculator{display:grid;grid-template-columns:minmax(150px,.35fr) minmax(0,1fr);gap:14px;margin:18px 0;padding:15px;border:1px solid #29483b;border-radius:11px;background:linear-gradient(120deg,#14241f,#111a20)}
+.market-calculator>div{min-width:0}.market-calculator>div:first-child{display:flex;flex-direction:column;gap:8px}.market-calculator>div:first-child>small,.market-comparison>small{font-size:8px;letter-spacing:1px;color:var(--muted)}
+.market-calculator label{display:flex;flex-direction:column;gap:7px;font-size:10px;color:#b8c8d1}.market-calculator input{width:100%;font-size:16px}.market-comparison{grid-column:1/-1;padding-top:13px;border-top:1px solid #29483b}.market-comparison>div{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}.market-comparison>div span{display:flex;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:7px;background:#101a20;color:#bdccd5;font-size:10px}.market-comparison>div b{font-family:'Space Grotesk';color:var(--green)}.market-comparison p{margin:10px 0 0;color:#95a8b5;font-size:10px;line-height:1.6}
+.abc-card,.auction-card,.value-card,.rate-card{height:100%}
+.abc-card{display:flex;flex-direction:column}
+.abc-totals{margin-top:auto}
+.catalog-card .catalog-price,.catalog-card .catalog-price-row{margin-top:auto}
+.catalog-card .catalog-shards{margin-top:10px}
+.auction-grid,.value-grid,.abc-grid{align-items:stretch}
+.auction-card:focus-visible,.value-card:focus-visible,.abc-card:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+@media (max-width:700px){
+  .page:not(#overview) .toolbar{position:relative;padding:9px;gap:7px}
+  .page:not(#overview) .toolbar>.muted{text-align:left;padding:2px 3px}
+  .empty{min-height:130px;padding:25px 16px}
+  .table-empty{padding:30px 14px!important}
+  .market-calculator{grid-template-columns:1fr;padding:12px}.market-comparison>div{grid-template-columns:1fr}
+}
+
+.fixed-opshard-price{background:linear-gradient(120deg,#10261c,#122019);border-color:#3b7656}.fixed-opshard-price b{color:#69e8b3}
+.auth-hero{display:flex;align-items:center;justify-content:space-between;gap:28px;margin-bottom:16px;padding:25px 28px;background:radial-gradient(circle at 80% 20%,#2c795033,transparent 48%),linear-gradient(120deg,#14251f,#111a21);border-color:#315342}.auth-hero h2{margin:9px 0 5px;font-size:26px}.auth-hero p{max-width:700px;margin:0}.auth-hero-steps{display:flex;gap:10px;flex:none}.auth-hero-steps span{display:flex;align-items:center;gap:6px;color:#a9bdc4;font-size:10px}.auth-hero-steps b{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#1b4432;color:var(--green)}.auth-guest-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.auth-card{min-height:285px}.auth-card-icon{display:grid;place-items:center;width:33px;height:33px;border-radius:9px;background:#183529;color:var(--green);font-size:18px}.auth-header-actions{display:flex;align-items:center;gap:10px}.webhook-notice{display:flex;align-items:flex-start;gap:10px;margin:-3px 0 16px;padding:10px 12px;border:1px solid #51462c;border-radius:9px;background:#231f15;color:#e6cf96}.webhook-notice>span{font-size:18px}.webhook-notice p{margin:0;font-size:10px;line-height:1.6}.tag-active{background:#19442e;border-color:#367452;color:#d1ffe8}
+@media(max-width:700px){.auth-hero{display:block;padding:20px}.auth-hero h2{font-size:22px}.auth-hero-steps{margin-top:16px;justify-content:space-between}.auth-guest-grid{grid-template-columns:1fr}.auth-header-actions{align-items:flex-end;flex-direction:column}.webhook-notice{margin-top:10px}}
+
+.value-source-note{display:block;margin-top:7px;color:#81939f;font-size:8px}.category-filter#merchant-category-filter{margin-top:0}
+
+#more-rates{display:block;margin:4px auto 22px;min-width:220px}.rate-card .icon-fallback{font-size:22px;color:#9bb0bb}
+#more-abc{display:block;margin:18px auto 22px;min-width:220px}
+.rate-source{display:block;margin-top:4px;color:#7fa994!important;line-height:1.5}
+.action-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}.button-icon{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;background:#1b4b38;color:var(--green);font-size:12px}.primary .button-icon{background:#0d6f4b;color:#d8ffed}
+.nav-icon{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid #2c4a46;border-radius:6px;color:#8bd9be;font-size:12px;line-height:1;flex:none}.selected .nav-icon{background:#1b4b38;border-color:#59e4ad;color:#b6ffe0}
+.account-link-card{margin-top:16px}.account-link-card .detail-actions{flex-wrap:wrap}.account-link-card input:disabled{opacity:.75;cursor:not-allowed}
+
+/* Account dashboard: keep identity and activity metrics readable at every width. */
+.account-dashboard{overflow:hidden;border-color:#2c4d42;background:linear-gradient(145deg,#121f1d,#121820)}
+.account-dashboard>.card-head{align-items:flex-start;margin-bottom:20px}
+.account-dashboard>.card-head h2{margin-top:6px}
+.account-dashboard .auth-header-actions{flex:none;justify-content:flex-end}
+.account-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.account-metrics>div{min-width:0;padding:13px 14px;border:1px solid #2a3b43;border-radius:9px;background:#101a20}
+.account-metrics>div:nth-child(-n+3){background:#12231f;border-color:#2d5143}
+.account-metrics small{display:block;margin-bottom:8px;color:#8fa4ad;font-size:8px;letter-spacing:.8px;line-height:1.35}
+.account-metrics b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e5eff1;font:600 14px 'Space Grotesk';font-variant-numeric:tabular-nums}
+.account-metrics>div:nth-child(-n+3) b{color:#69e8b3}
+.auth-webhook-card,.account-link-card{min-width:0}
+.auth-webhook-card .card-head,.account-link-card .card-head{align-items:flex-start}
+.auth-webhook-card .auth-header-actions .tag{white-space:nowrap}
+@media(max-width:1150px){.account-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.account-metrics>div:nth-child(4){grid-column:1/2}.account-metrics>div:nth-child(5){grid-column:2/3}}
+@media(max-width:700px){.account-dashboard>.card-head{display:block}.account-dashboard .auth-header-actions{justify-content:space-between;align-items:center;flex-direction:row;margin-top:14px}.account-metrics{grid-template-columns:1fr 1fr;gap:8px}.account-metrics>div{padding:11px 12px}.account-metrics>div:nth-child(4),.account-metrics>div:nth-child(5){grid-column:auto}.account-metrics>div:first-child{grid-column:1/-1}.auth-webhook-card .card-head,.account-link-card .card-head{display:block}.auth-webhook-card .auth-header-actions{margin-top:12px}.auth-webhook-card .auth-header-actions .tag{display:inline-flex}.account-link-card .two-fields{grid-template-columns:1fr}.account-link-card .detail-actions,.auth-webhook-card .detail-actions{width:100%}.account-link-card .detail-actions button,.auth-webhook-card .detail-actions button{width:100%}}
+/* Dashboard quick actions and account health. */
+.dashboard-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px;padding-top:15px;border-top:1px solid #263b3b}.dashboard-actions button{flex:1;min-width:175px}.dashboard-health{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:10px}.dashboard-health>div{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #293b43;border-radius:8px;background:#101a20;color:#9eb0b8;font-size:10px}.dashboard-health b{margin-left:auto;color:#d9e7e8;font-size:10px}.health-dot{width:8px;height:8px;border-radius:50%;background:#697b85;box-shadow:0 0 0 3px #697b8522;flex:none}.health-dot.ok{background:#69e8b3;box-shadow:0 0 0 3px #69e8b322}.health-dot.warn{background:#e6c56d;box-shadow:0 0 0 3px #e6c56d22}@media(max-width:700px){.dashboard-actions{display:grid;grid-template-columns:1fr}.dashboard-actions button{width:100%;min-width:0}.dashboard-health{grid-template-columns:1fr}.dashboard-health>div{padding:10px 11px}}
+
+/* Minecraft identity panel: make the ownership state explicit before a real in-game verification exists. */
+.account-link-grid{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,1.55fr);gap:14px;align-items:stretch}
+.account-contact,.minecraft-link-panel{min-width:0;padding:15px;border:1px solid #293d45;border-radius:10px;background:linear-gradient(145deg,#101a21,#111b20)}
+.account-contact{display:flex;flex-direction:column;justify-content:flex-start}.account-contact-status{display:flex;align-items:flex-start;gap:8px;margin-top:12px;color:#9db0ba;font-size:10px;line-height:1.5}.status-dot{width:8px;height:8px;margin-top:3px;border-radius:50%;background:#69e8b3;box-shadow:0 0 0 3px #69e8b322;flex:none}
+.minecraft-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px}.minecraft-panel-head h3{margin:5px 0 0;font-size:16px}.panel-kicker{color:#69e8b3;font-size:8px;letter-spacing:1.1px}.minecraft-status-note{margin:12px 0 0;padding:10px 11px;border:1px solid #2b4149;border-radius:8px;background:#0e171d;line-height:1.6}.minecraft-verify-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.minecraft-verify-steps>div{display:flex;gap:7px;min-width:0;padding:9px;border:1px solid #263842;border-radius:8px;background:#111c22}.minecraft-verify-steps b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#1b4432;color:#69e8b3;font-size:10px;flex:none}.minecraft-verify-steps strong,.minecraft-verify-steps small{display:block}.minecraft-verify-steps strong{font-size:9px;color:#d8e6e7}.minecraft-verify-steps small{margin-top:4px;color:#8499a5;font-size:8px;line-height:1.45}.account-security-note{display:flex;align-items:flex-start;gap:9px;margin-top:12px;padding:10px 12px;border:1px solid #3a4a38;border-radius:8px;background:#171d17;color:#b9c7bd}.account-security-note p{margin:0;font-size:10px;line-height:1.55}.account-security-note strong{color:#dff4e6}.tag-warning{background:#3b321d;border-color:#766032;color:#f1d897}
+@media(max-width:900px){.account-link-grid{grid-template-columns:1fr}.minecraft-verify-steps{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.minecraft-verify-steps{grid-template-columns:1fr}.minecraft-panel-head{display:flex!important;flex-direction:row!important}.account-contact,.minecraft-link-panel{padding:13px}.account-security-note{margin-top:10px}}
+.minecraft-challenge{margin-top:14px;padding:14px;border:1px solid #3d7659;border-radius:10px;background:linear-gradient(135deg,#142d24,#101b20);display:grid;grid-template-columns:minmax(130px,.35fr) minmax(0,1fr);gap:12px}.minecraft-challenge[hidden]{display:none}.minecraft-challenge>div:first-child{display:flex;flex-direction:column;gap:5px}.minecraft-challenge>div:first-child>b{font:700 27px 'Space Grotesk';letter-spacing:3px;color:#69e8b3}.minecraft-challenge>div:first-child small{color:#a5bdb3;font-size:9px}.minecraft-command{display:flex;align-items:center;gap:8px;min-width:0}.minecraft-command code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;padding:10px;border:1px solid #2b4b3e;border-radius:7px;background:#0c1714;color:#d2f8e5;font-size:11px}.minecraft-command button{flex:none}.minecraft-challenge form{grid-column:1/-1;display:flex;align-items:end;gap:9px}.minecraft-challenge form label{flex:1}.minecraft-challenge form button{flex:none}.minecraft-challenge>p{grid-column:1/-1;margin:0}
+@media(max-width:700px){.minecraft-challenge{grid-template-columns:1fr;padding:12px}.minecraft-challenge form{display:block}.minecraft-challenge form button{width:100%;margin-top:9px}.minecraft-command button{padding-inline:10px}}
+.minecraft-server-confirmation{grid-column:1/-1;display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid #2f5c4a;border-radius:8px;background:#10231c;color:#b9d9c9}.minecraft-server-confirmation p{margin:0;font-size:10px;line-height:1.55}.minecraft-server-confirmation strong{color:#d9f5e5}
+
+/* Price quality and icon fallback states stay readable on every theme. */
+.value-quality-warning{display:flex;align-items:flex-start;gap:8px;margin:10px 0;padding:9px 11px;border:1px solid #6b542b;border-radius:8px;background:linear-gradient(120deg,#2b2417,#191b1d);color:#e4d2a2;font-size:10px;line-height:1.55}
+.value-quality-warning::before{content:'!';display:grid;place-items:center;flex:none;width:17px;height:17px;border-radius:50%;background:#71582b;color:#fff0bd;font:bold 11px 'Space Grotesk'}
+.value-quality-warning b{color:#ffe1a0}.tag-unpriced{color:#f0cc86!important;background:#2a2418!important;border-color:#63502b!important}
+.icon-fallback{display:grid;place-items:center;width:100%;height:100%;color:#98aab5;font:600 18px 'Space Grotesk';background:linear-gradient(145deg,#1b2930,#141c22);border-radius:inherit}
+.icon-status-note{display:block;margin-top:5px;color:#d9bd7b;font-size:8px;letter-spacing:.35px;text-transform:uppercase}
+.icon-source-note{color:#bdc6c9;font-size:9px}
+.icon-asset-unavailable{border-color:#67562f;box-shadow:inset 0 0 0 1px #67562f44}
+.value-icon .icon-fallback,.abc-icon .icon-fallback,.rate-icon .icon-fallback{font-size:16px}
+@media(max-width:700px){.value-quality-warning{font-size:9px;padding:8px 9px}.value-quality-warning::before{width:15px;height:15px;font-size:10px}}
+
+/* Keep navigation glyphs visually distinct without relying on an icon font. */
+.nav-icon{font-family:'Segoe UI Symbol','Noto Sans Symbols 2',sans-serif;font-weight:600;text-align:center}
+.nav-icon-home{color:#8fe0c0}.nav-icon-market{color:#91b8ff}.nav-icon-abc{color:#e4c27e}.nav-icon-auctions{color:#f0ad85}.nav-icon-catalog{color:#c2a6ef}.nav-icon-values{color:#79d6ef}.nav-icon-merchant{color:#a9df8c}.nav-icon-alerts{color:#eaa4c3}
+.selected .nav-icon{color:#d8ffed}
+
+/* On phones the five-column market table cannot fit. Render each row as a
+   compact card so BUY/SELL and last-trade values remain visible without a
+   horizontal scroll or clipped right edge. */
+@media(max-width:700px){
+  #market .table-wrap{overflow:visible;max-height:none;padding:0;border:0;background:transparent;contain:none}
+  #market .table-wrap table,#market .table-wrap tbody{display:block;width:100%;min-width:0;white-space:normal}
+  #market .table-wrap thead{display:none}
+  #market .table-wrap tbody tr{display:block;width:100%;min-width:0;margin:0 0 10px;padding:13px 14px;border:1px solid #293943;border-radius:12px;background:linear-gradient(155deg,#141e25,#10171d)}
+  #market .table-wrap tbody tr:nth-child(even){background:linear-gradient(155deg,#141e25,#10171d)}
+  #market .table-wrap tbody td{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;min-width:0;padding:9px 0;border-top:1px solid #25343e;white-space:normal;text-align:right;line-height:1.45}
+  #market .table-wrap tbody td:first-child{display:block;padding:0 0 11px;border-top:0;text-align:left}
+  #market .table-wrap tbody td:not(:first-child)::before{flex:0 0 auto;color:#8498a5;font-size:8px;letter-spacing:.7px;text-transform:uppercase;text-align:left}
+  #market .table-wrap tbody td:nth-child(2)::before{content:'Kategorie'}
+  #market .table-wrap tbody td:nth-child(3)::before{content:'Spieler kaufen · BUY'}
+  #market .table-wrap tbody td:nth-child(4)::before{content:'Spieler verkaufen · SELL'}
+  #market .table-wrap tbody td:nth-child(5)::before{content:'Letzter Handel'}
+  #market .table-wrap tbody td:not(:first-child)>*{max-width:62%;overflow-wrap:anywhere}
+  #market .table-wrap tbody td:first-child .item-name{gap:11px}
+  #market .table-wrap tbody td:first-child .item-name img{width:38px;height:38px;flex:none}
+  #market .table-wrap tbody td:first-child .item-name b{font-size:13px}
+  #market .table-wrap tbody td:first-child .item-name small{font-size:9px;margin-top:3px}
+}

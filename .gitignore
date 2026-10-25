@@ -1,0 +1,9 @@
+.env
+.venv/
+node_modules/
+data/
+work/
+OPSUCHT-Radar.apk
+radar.sqlite*
+__pycache__/
+*.log
