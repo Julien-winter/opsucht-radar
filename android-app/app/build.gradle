@@ -5,7 +5,7 @@ plugins {
 def radarUrl = (project.findProperty('opsuchtUrl') ?: 'http://45.93.249.214:63816/').toString()
 // The APK checks this public GitHub release endpoint for optional updates.
 // A build property can still override it for forks or staging repositories.
-def updateApi = (project.findProperty('opsuchtUpdateApi') ?: 'https://api.github.com/repos/Fanxi2158/guns.lol-view-bot/releases/latest').toString()
+def updateApi = (project.findProperty('opsuchtUpdateApi') ?: 'https://api.github.com/repos/Julien-winter/opsucht-radar/releases/latest').toString()
 
 android {
     namespace 'net.opsucht.radar'

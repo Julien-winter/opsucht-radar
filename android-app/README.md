@@ -27,7 +27,7 @@ gradlew.bat assembleDebug -PopsuchtUrl=http://dein-host:63816/
 ```
 
 Die App prüft beim Start standardmäßig die GitHub-Releases von
-`Fanxi2158/guns.lol-view-bot`. Sie liest nur Release-Metadaten und öffnet bei
+`Julien-winter/opsucht-radar`. Sie liest nur Release-Metadaten und öffnet bei
 einer neueren Version die Release-Seite; sie installiert nichts automatisch.
 Für Forks oder Test-Repositories kann die URL beim Build überschrieben werden:
 
