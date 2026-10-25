@@ -194,6 +194,13 @@ const DATA_DIR = path.resolve(env("DATA_DIR", path.join(ROOT, "data")));
 // Keep the SQLite database and every durable account/collector artifact in a
 // single operator-owned directory. Startup never replaces an existing DB.
 fs.mkdirSync(DATA_DIR, { recursive: true });
+// Optional device telemetry is kept outside SQLite so replacing the database
+// during a repair cannot remove the operator's usage statistics.  The client
+// must explicitly send consent=true; records are grouped by a short,
+// normalized manufacturer/model path and contain no IP address or account
+// identifiers.
+const TELEMETRY_DIR = path.join(DATA_DIR, "telemetry");
+fs.mkdirSync(TELEMETRY_DIR, { recursive: true, mode: 0o750 });
 const DB_PATH = path.join(DATA_DIR, "radar.sqlite");
 const MAX_BODY = 32 * 1024;
 const SESSION_DAYS = 30;
@@ -1196,7 +1203,10 @@ function securityHeaders(response, request){
 }
 function authenticate(request,response){
   const pathname=new URL(request.url,"http://localhost").pathname;
-  if (pathname === "/api/integrations/minecraft/verify") return true;
+  // Public, consent-gated telemetry is intentionally unauthenticated. It is
+  // protected by the dedicated per-IP limiter in handleRequest and accepts no
+  // account/session fields.
+  if (pathname === "/api/integrations/minecraft/verify" || pathname === "/api/telemetry") return true;
   if (pathname === "/api/me" || pathname.startsWith("/api/me/")) {
     if (userFromRequest(request)) return true;
     jsonResponse(response,{error:"Anmeldung erforderlich"},401);
@@ -1215,6 +1225,7 @@ function authenticate(request,response){
   if(got.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(got),Buffer.from(expected))){jsonResponse(response,{error:"Admin-Token erforderlich"},401);return false;}
   return true;
 }
+
 function userFromRequest(request, touch = true) {
   const header = String(request.headers.authorization || "");
   if (!/^Bearer\s+\S+$/i.test(header)) return null;
@@ -1285,6 +1296,61 @@ async function readJsonBody(request){
   const chunks=[];let size=0;
   for await(const chunk of request){size+=chunk.length;if(size>MAX_BODY)throw Object.assign(new Error("Request body too large"),{status:413});chunks.push(chunk);}
   try{return JSON.parse(Buffer.concat(chunks).toString("utf8"));}catch{throw new Error("Ungültiges JSON");}
+}
+
+function telemetryValue(value, fallback = "unknown") {
+  const text = String(value ?? "").trim().replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ");
+  if (!text) return fallback;
+  // Keep values useful for grouping while preventing path traversal and
+  // accidental collection of arbitrary long strings.
+  return text.replace(/[^a-zA-Z0-9 ._()+\-/]/g, "").slice(0, 64) || fallback;
+}
+
+function telemetryPathPart(value, fallback = "unknown") {
+  const normalized = telemetryValue(value, fallback).toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^[.-]+|[.-]+$/g, "");
+  return normalized.slice(0, 48) || fallback;
+}
+
+function telemetryPayload(data, request) {
+  if (data?.consent !== true) throw Object.assign(new Error("Telemetry ist nur mit ausdrücklicher Zustimmung möglich."), { status: 400 });
+  const manufacturer = telemetryValue(data.manufacturer);
+  const model = telemetryValue(data.model);
+  if (manufacturer === "unknown" || model === "unknown") throw Object.assign(new Error("Hersteller und Modell sind erforderlich."), { status: 400 });
+  const platform = telemetryValue(data.platform, "unknown");
+  const os = telemetryValue(data.os, "unknown");
+  const appVersion = telemetryValue(data.appVersion, "unknown");
+  const screen = data.screen && typeof data.screen === "object" ? {
+    width: Math.max(0, Math.min(10000, Number(data.screen.width) || 0)),
+    height: Math.max(0, Math.min(10000, Number(data.screen.height) || 0)),
+    dpr: Math.max(0, Math.min(10, Number(data.screen.dpr) || 0))
+  } : undefined;
+  return {
+    at: new Date().toISOString(),
+    manufacturer,
+    model,
+    platform,
+    os,
+    appVersion,
+    ...(screen ? { screen } : {}),
+    // Deliberately omit IP, raw user-agent, cookies, account/session IDs and
+    // any fields not listed above. The request is only used for rate limiting.
+    source: "opsucht-radar"
+  };
+}
+
+function saveTelemetry(data, request) {
+  const payload = telemetryPayload(data, request);
+  const manufacturer = telemetryPathPart(payload.manufacturer), model = telemetryPathPart(payload.model);
+  const folder = path.join(TELEMETRY_DIR, manufacturer, model);
+  fs.mkdirSync(folder, { recursive: true, mode: 0o750 });
+  const day = payload.at.slice(0, 10);
+  const file = path.join(folder, `${day}.jsonl`);
+  const line = `${JSON.stringify(payload)}\n`;
+  // A daily per-model file avoids rewriting or replacing existing data. Keep
+  // a conservative cap so an abusive client cannot grow one file forever.
+  if (fs.existsSync(file) && fs.statSync(file).size > 10 * 1024 * 1024) throw Object.assign(new Error("Telemetry-Datei ist vorübergehend voll."), { status: 503 });
+  fs.appendFileSync(file, line, { encoding: "utf8", mode: 0o640 });
+  return { manufacturer, model, recorded_at: payload.at };
 }
 
 function apiData(request,pathname){
@@ -1426,6 +1492,15 @@ async function handleRequest(request,response){
       const username=validUsername(data.username),password=validPassword(data.password),email=validEmail(data.email);if(!email){recordAuthFailure(authKey);throw new Error("E-Mail-Adresse ist für die Registrierung erforderlich.");}if(!username||!password){recordAuthFailure(authKey);throw new Error("Benutzername (3–32 Zeichen) und Passwort (mindestens 8 Zeichen) erforderlich.");}
       const exists=store.db.prepare("SELECT 1 FROM users WHERE lower(username)=lower(?)").get(username);if(exists){recordAuthFailure(authKey);throw Object.assign(new Error("Dieser Benutzername ist bereits vergeben."),{status:409});}if(email&&store.db.prepare("SELECT 1 FROM users WHERE lower(email)=lower(?)").get(email)){recordAuthFailure(authKey);throw Object.assign(new Error("Diese E-Mail-Adresse wird bereits verwendet."),{status:409});}
       const result=store.db.prepare("INSERT INTO users(username,password_hash,email,created,last_login) VALUES(?,?,?,?,?)").run(username,passwordHash(password),email,Date.now()/1000,Date.now()/1000);const userId=Number(result.lastInsertRowid),token=issueSession(userId);jsonResponse(response,{ok:true,token,user:{id:userId,username,email:email||null,email_verified:false,webhook_configured:false,mention:"none"}},201);return;
+    }
+    if(request.method==="POST"&&pathname==="/api/telemetry"){
+      const trustProxy=Boolean(env("RENDER_EXTERNAL_URL"))||truthy(env("TRUST_PROXY_HEADERS"));
+      const forwarded=trustProxy?request.headers["x-forwarded-for"]:null;
+      const remote=String(forwarded||request.socket.remoteAddress||"unknown").split(",")[0].trim();
+      const retry=takeRateToken(`telemetry|${remote}`, Number(env("PUBLIC_TELEMETRY_RATE_LIMIT", "10")), 2);
+      if(retry){retryAfter(response,retry);return;}
+      const result=saveTelemetry(data,request);
+      jsonResponse(response,{ok:true,...result},202);return;
     }
     if(request.method==="POST"&&pathname==="/api/auth/login"){
       const authKey=authAttemptKey(request,data.username),blocked=failedAuthRetry(authKey);if(blocked)throw Object.assign(new Error("Zu viele Anmeldeversuche. Bitte später erneut versuchen."),{status:429,retryAfter:blocked});
