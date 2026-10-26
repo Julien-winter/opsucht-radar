@@ -22,7 +22,7 @@ jobs:
 
       - name: Build Android APK
         working-directory: android-app
-        run: ./gradlew assembleRelease --no-daemon
+        run: bash ./gradlew assembleRelease --no-daemon
 
       - name: Prepare release assets
         shell: bash
