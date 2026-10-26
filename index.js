@@ -1328,29 +1328,41 @@ function telemetryPayload(data, request) {
   const screen = data.screen && typeof data.screen === "object" ? {
     width: Math.max(0, Math.min(10000, Number(data.screen.width) || 0)),
     height: Math.max(0, Math.min(10000, Number(data.screen.height) || 0)),
-    dpr: Math.max(0, Math.min(10, Number(data.screen.dpr) || 0)), colorDepth: Math.max(0, Math.min(64, Number(data.screen.colorDepth) || 0)), orientation: telemetryValue(data.screen.orientation, "unknown").slice(0,16)
+    dpr: Math.max(0, Math.min(10, Number(data.screen.dpr) || 0)),
+    colorDepth: Math.max(0, Math.min(64, Number(data.screen.colorDepth) || 0)),
+    ...(String(data.screen.orientation || "").trim() ? { orientation: telemetryValue(data.screen.orientation).slice(0, 16) } : {})
   } : undefined;
   const clean = (value, max = 64) => telemetryValue(value).slice(0, max);
+  const optionalClean = (value, max = 64) => {
+    const raw = String(value ?? "").trim();
+    if (!raw || raw.toLowerCase() === "unknown") return undefined;
+    return telemetryValue(raw).slice(0, max) || undefined;
+  };
   const modelMap = { a059: { manufacturer: "nothing", model: "phone-3a", displayName: "Nothing Phone 3a" } };
   const modelCodeRaw = String(data.modelCode || "").trim();
-  const modelCode = modelCodeRaw ? clean(modelCodeRaw, 32) : "";
+  const modelCode = modelCodeRaw ? optionalClean(modelCodeRaw, 32) || "" : "";
   const mapped = modelMap[String(modelCode || model).toLowerCase()];
   const readableManufacturer = mapped?.manufacturer || manufacturer;
   const readableModel = mapped?.model || model;
   const viewport = data.viewport && typeof data.viewport === "object" ? { width: Math.max(0, Math.min(10000, Number(data.viewport.width) || 0)), height: Math.max(0, Math.min(10000, Number(data.viewport.height) || 0)) } : undefined;
-  const connection = data.connection && typeof data.connection === "object" ? { effectiveType: clean(data.connection.effectiveType, 16), saveData: Boolean(data.connection.saveData) } : undefined;
+  const connection = data.connection && typeof data.connection === "object" ? {
+    ...(optionalClean(data.connection.effectiveType, 16) ? { effectiveType: optionalClean(data.connection.effectiveType, 16) } : {}),
+    ...(optionalClean(data.connection.type, 16) ? { type: optionalClean(data.connection.type, 16) } : {}),
+    ...(data.connection.saveData !== undefined ? { saveData: Boolean(data.connection.saveData) } : {}),
+    ...(Number.isFinite(Number(data.connection.downlink)) ? { downlink: Math.max(0, Math.min(100, Number(data.connection.downlink))) } : {})
+  } : undefined;
   const sessionBucketRaw = String(data.sessionBucket || "").trim().toLowerCase();
   const sessionBucket = /^[a-z0-9][a-z0-9_-]{5,47}$/.test(sessionBucketRaw) ? sessionBucketRaw : "legacy";
-  const event = data.event == null ? undefined : clean(data.event, 32), page = data.page == null ? undefined : clean(data.page, 32), feature = data.feature == null ? undefined : clean(data.feature, 32), eventState = data.state == null ? undefined : clean(data.state, 16);
+  const event = data.event == null ? undefined : optionalClean(data.event, 32), page = data.page == null ? undefined : optionalClean(data.page, 32), feature = data.feature == null ? undefined : optionalClean(data.feature, 32), eventState = data.state == null ? undefined : optionalClean(data.state, 16);
   const boundedNumber = (value, max) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(max, Number(value))) : undefined;
   const durationSec = boundedNumber(data.durationSec, 86400), activeSeconds = boundedNumber(data.activeSeconds, 86400), onlineSeconds = boundedNumber(data.onlineSeconds, 86400);
   const pageViews = boundedNumber(data.pageViews, 100000), visibilityChanges = boundedNumber(data.visibilityChanges, 100000), onlineEvents = boundedNumber(data.onlineEvents, 100000), offlineEvents = boundedNumber(data.offlineEvents, 100000);
   const maxTouchPoints = boundedNumber(data.maxTouchPoints, 20);
   const apiStatus = boundedNumber(data.apiStatus, 599), apiDurationMs = boundedNumber(data.apiDurationMs, 60000), loadMs = boundedNumber(data.loadMs, 60000), domReadyMs = boundedNumber(data.domReadyMs, 60000), transferKb = boundedNumber(data.transferKb, 10240);
-  const errorType = clean(data.errorType, 32), errorContext = clean(data.errorContext, 32), apiName = clean(data.apiName, 32);
+  const errorType = optionalClean(data.errorType, 32), errorContext = optionalClean(data.errorContext, 32), apiName = optionalClean(data.apiName, 32);
   const timestamp = value => { const text = String(value || ""); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(text)) return undefined; const parsed = Date.parse(text); return Number.isFinite(parsed) ? new Date(parsed).toISOString() : undefined; };
   const sessionStartedAt = timestamp(data.sessionStartedAt), sessionEndedAt = timestamp(data.sessionEndedAt);
-  return { at: new Date().toISOString(), manufacturer: readableManufacturer, model: readableModel, ...(modelCode !== "unknown" ? { modelCode } : {}), ...(mapped?.displayName ? { displayName: mapped.displayName } : {}), platform, os, appVersion,
+  return { at: new Date().toISOString(), manufacturer: readableManufacturer, model: readableModel, ...(modelCode ? { modelCode } : {}), ...(mapped?.displayName ? { displayName: mapped.displayName } : {}), platform, os, appVersion,
     ...(event ? { event } : {}), ...(page ? { page } : {}), ...(feature ? { feature } : {}), ...(eventState ? { state: eventState } : {}), ...(durationSec !== undefined ? { durationSec } : {}),
     ...(activeSeconds !== undefined ? { activeSeconds } : {}), ...(onlineSeconds !== undefined ? { onlineSeconds } : {}),
     ...(pageViews !== undefined ? { pageViews } : {}), ...(visibilityChanges !== undefined ? { visibilityChanges } : {}),
@@ -1359,13 +1371,13 @@ function telemetryPayload(data, request) {
     ...(loadMs !== undefined ? { loadMs } : {}), ...(domReadyMs !== undefined ? { domReadyMs } : {}), ...(transferKb !== undefined ? { transferKb } : {}),
     ...(errorType ? { errorType } : {}), ...(errorContext ? { errorContext } : {}), ...(apiName ? { apiName } : {}),
     ...(sessionStartedAt ? { sessionStartedAt } : {}), ...(sessionEndedAt ? { sessionEndedAt } : {}),
-    ...(clean(data.browser, 16) ? { browser: clean(data.browser, 16) } : {}), ...(data.mobile !== undefined ? { mobile: Boolean(data.mobile) } : {}),
-    ...(clean(data.locale, 16) ? { locale: clean(data.locale, 16) } : {}), ...(clean(data.timezone, 48) ? { timezone: clean(data.timezone, 48) } : {}),
+    ...(optionalClean(data.browser, 16) ? { browser: optionalClean(data.browser, 16) } : {}), ...(data.mobile !== undefined ? { mobile: Boolean(data.mobile) } : {}),
+    ...(optionalClean(data.locale, 16) ? { locale: optionalClean(data.locale, 16) } : {}), ...(optionalClean(data.timezone, 48) ? { timezone: optionalClean(data.timezone, 48) } : {}),
     ...(viewport ? { viewport } : {}), ...(connection ? { connection } : {}), ...(data.mobileData !== undefined ? { mobileData: Boolean(data.mobileData) } : {}),
     ...(data.dataSaver !== undefined ? { dataSaver: Boolean(data.dataSaver) } : {}), ...(sessionBucket ? { sessionBucket } : {}),
     ...(Number.isFinite(Number(data.deviceMemory)) ? { deviceMemory: Math.max(0, Math.min(64, Number(data.deviceMemory))) } : {}),
     ...(Number.isFinite(Number(data.hardwareConcurrency)) ? { hardwareConcurrency: Math.max(0, Math.min(128, Number(data.hardwareConcurrency))) } : {}),
-    ...(clean(data.colorScheme, 8) ? { colorScheme: clean(data.colorScheme, 8) } : {}), ...(data.reducedMotion !== undefined ? { reducedMotion: Boolean(data.reducedMotion) } : {}), ...(screen ? { screen } : {}), source: "opsucht-radar" };
+    ...(optionalClean(data.colorScheme, 8) ? { colorScheme: optionalClean(data.colorScheme, 8) } : {}), ...(data.reducedMotion !== undefined ? { reducedMotion: Boolean(data.reducedMotion) } : {}), ...(screen ? { screen } : {}), source: "opsucht-radar" };
 }
 
 function saveTelemetry(data, request) {
