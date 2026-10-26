@@ -1603,8 +1603,16 @@ async function handleRequest(request,response){
       if(!minecraftServiceAuthorized(request))throw Object.assign(new Error("Minecraft-Server nicht autorisiert."),{status:401});
       const code=String(data.code||"").trim(),uuid=normalizeUuid(data.uuid),username=String(data.username||"").trim();
       if(!/^\d{6}$/.test(code)||!uuid)throw Object.assign(new Error("Code und Minecraft-UUID erforderlich."),{status:400});
-      const now=Date.now()/1000,row=store.db.prepare("SELECT * FROM minecraft_link_challenges WHERE code_hash=? AND minecraft_uuid=? AND used=0 AND expires>? ORDER BY created DESC LIMIT 1").get(hashSecret(code),uuid,now);
-      if(!row)throw Object.assign(new Error("Kein passender aktiver Minecraft-Code."),{status:404});
+      const now=Date.now()/1000;
+      // Challenges are one-time and brute-force limited.
+      const active=store.db.prepare("SELECT * FROM minecraft_link_challenges WHERE minecraft_uuid=? AND used=0 AND expires>? ORDER BY created DESC LIMIT 1").get(uuid,now);
+      if(!active || Number(active.attempts||0)>=5)throw Object.assign(new Error("Kein passender aktiver Minecraft-Code."),{status:404});
+      if(hashSecret(code)!==active.code_hash){
+        const attempts=Number(active.attempts||0)+1;
+        store.db.prepare("UPDATE minecraft_link_challenges SET attempts=?,used=? WHERE id=?").run(attempts,attempts>=5?1:0,active.id);
+        throw Object.assign(new Error("Kein passender aktiver Minecraft-Code."),{status:404});
+      }
+      const row=active;
       if(username&&username.toLowerCase()!==String(row.minecraft_username).toLowerCase())throw Object.assign(new Error("Minecraft-Name passt nicht zur Challenge."),{status:409});
       const conflict=store.db.prepare("SELECT id FROM users WHERE minecraft_uuid=? AND id<>? AND minecraft_verified=1").get(row.minecraft_uuid,row.user_id);if(conflict){store.db.prepare("UPDATE minecraft_link_challenges SET used=1 WHERE id=?").run(row.id);throw Object.assign(new Error("Dieser Minecraft-Account ist bereits verifiziert verknüpft."),{status:409});}
       store.db.prepare("UPDATE minecraft_link_challenges SET used=1,verified_at=? WHERE id=?").run(now,row.id);
