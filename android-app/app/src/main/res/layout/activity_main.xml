@@ -13,7 +13,7 @@
         android:background="@color/radar_background">
         <ProgressBar android:layout_width="42dp" android:layout_height="42dp" android:indeterminateTint="@color/radar_accent" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp"
-            android:text="OPSUCHT Exchange wird geladen …" android:textColor="#B7C7D4" android:textSize="15sp" />
+            android:text="OPSUCHT Market wird geladen …" android:textColor="#B7C7D4" android:textSize="15sp" />
     </LinearLayout>
     <TextView android:id="@+id/offline_view" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="bottom" android:gravity="center" android:padding="16dp"

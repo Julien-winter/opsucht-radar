@@ -604,7 +604,7 @@ function setError(area, error) {
   log(area, `${name}: ${detail}`);
 }
 async function getJson(url, timeout = 20000) {
-  const response = await fetch(url, { headers: { "User-Agent": "OPSUCHT-Exchange-Node/1.0", "Accept": "application/json" }, signal: AbortSignal.timeout(timeout), redirect: "error" });
+  const response = await fetch(url, { headers: { "User-Agent": "OPSUCHT-Market-Node/1.0", "Accept": "application/json" }, signal: AbortSignal.timeout(timeout), redirect: "error" });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
@@ -626,7 +626,7 @@ async function abcPoll() {
   saveMeta("abc_prices", prices); saveMeta("abc_updated", Date.now() / 1000); return prices;
 }
 async function sessionGet(url, timeout = 8000) {
-  return fetch(url, { headers: { "User-Agent": "OPSUCHT-Exchange-Node/1.0", "Accept": "application/json" }, signal: AbortSignal.timeout(timeout), redirect: "error" });
+  return fetch(url, { headers: { "User-Agent": "OPSUCHT-Market-Node/1.0", "Accept": "application/json" }, signal: AbortSignal.timeout(timeout), redirect: "error" });
 }
 async function resolveMinecraftAccount(username) {
   const name = String(username || "").trim();
@@ -884,7 +884,7 @@ function ruleMessage(payload){
   if(item.enchantments&&Object.keys(item.enchantments).length)fields.push({name:"Verzauberungen",value:enchantSummary(item).slice(0,1024)});
   let description=ending?"Auktion im Preisfenster – Gebote und Restzeit können sich ändern.":"Passendes Sofortkauf-Angebot – es kann inzwischen verkauft sein.";
   if(url)description+=`\n\n[🔴 Live-Auktion und Statistiken öffnen](${url})`;
-  const embed={title:`${ending?"⏳ Auktion endet bald":"⚡ Sofortkauf gefunden"}: ${name}`.slice(0,256),description,color:ending?0xf5c66b:0x48dfab,fields,timestamp:new Date().toISOString(),footer:{text:"OPSUCHT Exchange · Live-Feed · Discord-Zeitstempel"}};
+  const embed={title:`${ending?"⏳ Auktion endet bald":"⚡ Sofortkauf gefunden"}: ${name}`.slice(0,256),description,color:ending?0xf5c66b:0x48dfab,fields,timestamp:new Date().toISOString(),footer:{text:"OPSUCHT Market · Live-Feed · Discord-Zeitstempel"}};
   if(String(item.icon||"").startsWith("https://"))embed.thumbnail={url:item.icon};
   if(url)embed.url=url;
   return {...mention,embeds:[embed]};
@@ -1090,7 +1090,7 @@ function discordOwner(interaction){const id=env("DISCORD_OWNER_ID");return Boole
 function parseGamePrice(value){const n=Number(String(value||"").replace(/[\s.$,]/g,""));return Number.isFinite(n)&&n>0?n:null;}
 function panelPayload(discord){
   const {EmbedBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle}=discord;
-  const embed=new EmbedBuilder().setColor(0x48dfab).setTitle("OPSUCHT EXCHANGE").setDescription("Öffentliche Markt- und Auktionsdaten, direkt im Spielgeschehen. Suche Items, prüfe Spezial-Verzauberungen und sieh dir die Live-Website an.").addFields({name:"Auktionshaus",value:"Gebote und Sofortkäufe · live",inline:true},{name:"Itemwerte",value:"Bestätigte Verkäufe · Median",inline:true}).setFooter({text:"Persönliche Alarmregeln sind nur für den Radar-Inhaber sichtbar."});
+  const embed=new EmbedBuilder().setColor(0x48dfab).setTitle("OPSUCHT MARKET").setDescription("Öffentliche Markt- und Auktionsdaten, direkt im Spielgeschehen. Suche Items, prüfe Spezial-Verzauberungen und sieh dir die Live-Website an.").addFields({name:"Auktionshaus",value:"Gebote und Sofortkäufe · live",inline:true},{name:"Itemwerte",value:"Bestätigte Verkäufe · Median",inline:true}).setFooter({text:"Persönliche Alarmregeln sind nur für den Radar-Inhaber sichtbar."});
   const buttons=new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("radar:search").setLabel("Item suchen").setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId("radar:create").setLabel("Sofortkauf-Alarm").setStyle(ButtonStyle.Primary),
@@ -1170,7 +1170,7 @@ async function startDiscordPanel(){
     });
     client.once("ready",async()=>{
       try{
-        const command=new SlashCommandBuilder().setName("panel").setDescription("OPSUCHT Exchange-Panel öffnen").setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
+        const command=new SlashCommandBuilder().setName("panel").setDescription("OPSUCHT Market-Panel öffnen").setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
         await new REST({version:"10"}).setToken(token).put(Routes.applicationCommands(client.application.id),{body:[command.toJSON()]});
         status.bot_connected=true;delete status.errors.bot;
         const channelId=env("DISCORD_PANEL_CHANNEL_ID");if(!channelId)return;
@@ -1588,7 +1588,7 @@ async function handleRequest(request,response){
       const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});const webhook=validUserWebhook(String(data.webhook||"").trim());if(!webhook)throw new Error("Gültige Discord-Webhook-URL erforderlich.");const mention=String(data.mention||"none").trim();if(!(mention==="none"||mention==="everyone"||/^(user|role):\d+$/.test(mention)))throw new Error("Ping-Ziel: none, everyone, user:ID oder role:ID");const expires=Date.now()/1000+7*86400;store.db.prepare("UPDATE users SET webhook=?,mention=?,webhook_expires=? WHERE id=?").run(webhook,mention,expires,user.id);jsonResponse(response,{ok:true,user:userPublic({...user,webhook,mention,webhook_expires:expires})});return;
     }
     if(request.method==="DELETE"&&pathname==="/api/me/webhook"){const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});store.db.prepare("UPDATE users SET webhook=NULL,mention='none',webhook_expires=NULL WHERE id=?").run(user.id);jsonResponse(response,{ok:true});return;}
-    if(request.method==="POST"&&pathname==="/api/me/webhook/test"){const user=userFromRequest(request);if(!user||!user.webhook)throw Object.assign(new Error("Zuerst einen Webhook speichern."),{status:400});const retry=await sendWebhook({content:"✅ OPSUCHT Exchange ist verbunden. Deine persönlichen Alarme werden hier gemeldet.",allowed_mentions:{parse:[]}},user.webhook);if(retry)throw Object.assign(new Error("Discord begrenzt Anfragen. Bitte kurz warten."),{status:429});jsonResponse(response,{ok:true});return;}
+    if(request.method==="POST"&&pathname==="/api/me/webhook/test"){const user=userFromRequest(request);if(!user||!user.webhook)throw Object.assign(new Error("Zuerst einen Webhook speichern."),{status:400});const retry=await sendWebhook({content:"✅ OPSUCHT Market ist verbunden. Deine persönlichen Alarme werden hier gemeldet.",allowed_mentions:{parse:[]}},user.webhook);if(retry)throw Object.assign(new Error("Discord begrenzt Anfragen. Bitte kurz warten."),{status:429});jsonResponse(response,{ok:true});return;}
     if(request.method==="POST"&&pathname==="/api/me/minecraft"){
       const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});
       const edition=String(data.edition||"java").trim().toLowerCase();
@@ -1646,7 +1646,7 @@ async function handleRequest(request,response){
     }
     if(request.method==="POST"&&pathname==="/api/webhook/test"){
       if(Date.now()/1000-(store.get("webhook_test_at",0))<30){jsonResponse(response,{error:"Bitte 30 Sekunden zwischen Tests warten."},429);return;}saveMeta("webhook_test_at",Date.now()/1000);
-      try{const retry=await sendWebhook({content:"✅ OPSUCHT Exchange ist verbunden. Deine Alarme werden hier gemeldet.",allowed_mentions:{parse:[]}});if(retry){jsonResponse(response,{error:"Discord begrenzt Anfragen."},429);return;}jsonResponse(response,{ok:true});}catch(error){jsonResponse(response,{error:error.message},502);}return;
+      try{const retry=await sendWebhook({content:"✅ OPSUCHT Market ist verbunden. Deine Alarme werden hier gemeldet.",allowed_mentions:{parse:[]}});if(retry){jsonResponse(response,{error:"Discord begrenzt Anfragen."},429);return;}jsonResponse(response,{ok:true});}catch(error){jsonResponse(response,{error:error.message},502);}return;
     }
     jsonResponse(response,{error:"Not found"},404);
   }catch(error){

@@ -111,7 +111,7 @@ public final class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        settings.setUserAgentString(settings.getUserAgentString() + " OPSUCHT-Exchange-Android/1.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " OPSUCHT-Market-Android/1.0");
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -174,7 +174,7 @@ public final class MainActivity extends Activity {
         refreshLayout.setRefreshing(false);
         offlineView.setVisibility(View.VISIBLE);
         offlineView.setOnClickListener(v -> retryLoad());
-        offlineView.setText("OPSUCHT Exchange konnte nicht geladen werden.\nTippen zum erneuten Versuch");
+        offlineView.setText("OPSUCHT Market konnte nicht geladen werden.\nTippen zum erneuten Versuch");
     }
 
     private void retryLoad() {
@@ -212,7 +212,7 @@ public final class MainActivity extends Activity {
                 HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.UPDATE_API).openConnection();
                 connection.setConnectTimeout(5000); connection.setReadTimeout(5000);
                 connection.setRequestProperty("Accept", "application/vnd.github+json");
-                connection.setRequestProperty("User-Agent", "OPSUCHT-Exchange-Android/" + BuildConfig.VERSION_NAME);
+                connection.setRequestProperty("User-Agent", "OPSUCHT-Market-Android/" + BuildConfig.VERSION_NAME);
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) return;
                 StringBuilder body = new StringBuilder();
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
@@ -223,7 +223,7 @@ public final class MainActivity extends Activity {
                 String download = release.optString("html_url", "");
                 if (latest.isEmpty() || download.isEmpty() || !isNewer(latest, BuildConfig.VERSION_NAME)) return;
                 runOnUiThread(() -> new AlertDialog.Builder(this)
-                    .setTitle("Neue OPSUCHT-Exchange-Version")
+                    .setTitle("Neue OPSUCHT-Market-Version")
                     .setMessage("Version " + latest + " ist verfügbar. Jetzt die GitHub-Release-Seite öffnen?")
                     .setNegativeButton("Später", null)
                     .setPositiveButton("Öffnen", (dialog, which) -> openExternalIfNeeded(Uri.parse(download)))

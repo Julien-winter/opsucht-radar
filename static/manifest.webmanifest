@@ -1,6 +1,6 @@
 {
-  "name": "OPSUCHT Exchange",
-  "short_name": "OPSUCHT Exchange",
+  "name": "OPSUCHT Market",
+  "short_name": "OPSUCHT Market",
   "description": "Marktpreise, Auktionen, Itemwerte und Händlerkurse für OPSUCHT.",
   "lang": "de",
   "start_url": "/?source=app",

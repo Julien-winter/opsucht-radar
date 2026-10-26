@@ -1,4 +1,4 @@
-# OPSUCHT Exchange — Node.js
+# OPSUCHT Market — Node.js
 
 Öffentliche Read-only-Website und dauerhaft speichernder Markt-/Auktionssammler. Der aktive Hosting-Einstiegspunkt ist **`index.js` (Node.js)**. Es wird kein Python-Prozess zum Starten benötigt.
 

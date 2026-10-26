@@ -1,6 +1,6 @@
-# OPSUCHT Exchange Android-App
+# OPSUCHT Market Android-App
 
-Diese kleine Android-App lädt die responsive OPSUCHT-Exchange-Web-App in einer
+Diese kleine Android-App lädt die responsive OPSUCHT-Market-Web-App in einer
 nativen WebView. Dadurch bleiben Marktpreise, Auktionen, ABC, Itemwerte,
 Händler-Rechner, Konten und Discord-Alarme an einer Stelle aktuell.
 
