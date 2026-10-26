@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="OPSUCHT Radar – persönliche Economy-Übersicht und Alarmzentrale.">
+  <meta name="description" content="OPSUCHT Exchange – persönliche Economy-Übersicht und Alarmzentrale.">
   <link rel="icon" type="image/png" href="/static/opsucht-favicon.png">
   <link rel="alternate icon" href="/static/opsucht-favicon.png">
   <link rel="apple-touch-icon" href="/static/opsucht-favicon.png">
-  <title>OPSUCHT Radar · Economy Intelligence</title>
+  <title>OPSUCHT Exchange · Economy Intelligence</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/overrides.css">
   <link rel="stylesheet" href="/static/theme.css">
@@ -16,7 +16,7 @@
 </head>
 <body>
 <aside>
-  <div class="brand"><img class="mark" src="/static/opsucht-favicon.png" alt="OPSUCHT" width="37" height="37"><div>OPSUCHT<span>RADAR / ECONOMY</span></div></div>
+  <div class="brand"><img class="mark" src="/static/opsucht-favicon.png" alt="OPSUCHT" width="37" height="37"><div>OPSUCHT<span>EXCHANGE / ECONOMY</span></div></div>
   <div class="nav-label">DEINE WIRTSCHAFTSZENTRALE</div>
   <nav>
     <button data-page="overview" class="selected">◉ <span>Übersicht</span></button>
@@ -76,12 +76,13 @@
   </section>
   <section id="rules" class="page" hidden>
     <div class="overview-grid"><article class="card"><div class="card-head"><h2>Alarmregel erstellen</h2><span class="tag">LIVE</span></div><form id="rule-form"><label>Alarmtyp<select name="kind" id="rule-kind"><option value="instant">⚡ Sofortkauf · Preisgrenze / Rabatt</option><option value="ending_bid">⏳ Auktionsende · Höchstgebot + Restzeit</option></select></label><label>Regelname<input name="name" required maxlength="100" placeholder="Meine Modpicke"></label><label>Suchwörter · alle müssen vorkommen<input name="query" required maxlength="200" placeholder="modpicke"></label><div class="two-fields"><label id="max-label">Sofortkauf-Gesamtpreis strikt unter ($)<input name="max_price" type="number" min="0.01" step="any" placeholder="1700000"></label><label id="discount-label">Optional: Rabatt zum Median (%)<input name="discount" type="number" min="0.01" max="99.99" step="any" placeholder="20"></label></div><div id="ending-options" class="two-fields" hidden><label>Ab Minuten Restzeit<input name="min_minutes" type="number" min="0" step="1" value="10"></label><label>Bis Minuten Restzeit<input name="max_minutes" type="number" min="1" step="1" value="20"></label></div><p id="rule-hint" class="note">Preisgrenze oder Rabatt angeben. Bei beiden müssen beide Bedingungen passen. Rabattalarme brauchen mindestens 5 Verkäufe der exakt gleichen Variante.</p><button class="primary" type="submit">+ Alarm aktivieren</button></form></article><article class="card"><div class="card-head"><h2>Discord-Verbindung</h2><span class="tag">WEBHOOK</span></div><div id="discord-status"></div><button id="test-webhook" class="secondary">Testnachricht senden (ohne Ping)</button><p class="note">Echte Treffer pingen das konfigurierte Ziel. Pro Auktion und Regel ein Alarm. Gebote und Sofortkäufe haben getrennte Alarmtypen.</p><label>Admin-Token (nur bei konfiguriertem Fernzugriff)<input id="admin-token" type="password" placeholder="Optional · nur in dieser Sitzung"></label></article></div>
+    <article class="card maintenance-card"><div class="card-head"><div><h2>Wartungsmodus</h2><p class="section-subtitle">Öffentliche Bereiche bleiben sichtbar, während du Updates einspielst.</p></div><span id="maintenance-status" class="tag">AUS</span></div><form id="maintenance-form"><label class="check"><input id="maintenance-enabled" name="enabled" type="checkbox"> Wartungsbanner aktivieren</label><label>Hinweis für Besucher<textarea id="maintenance-message" name="message" maxlength="240" rows="3" placeholder="Kurze Wartung oder geplantes Update …"></textarea></label><button class="secondary" type="submit">Wartungsstatus speichern</button><p class="note">Der Status wird in der Datenbank gespeichert und bleibt bei einem Serverneustart erhalten.</p></form></article>
     <article class="card"><div class="card-head"><h2>Verbindung einrichten</h2><span class="tag">LOKAL GESPEICHERT</span></div><form id="settings-form"><div class="two-fields"><label>Discord-Webhook · leer lassen = behalten<input name="webhook" type="password" autocomplete="new-password" placeholder="Bereits eingerichtet"></label><label>Discord-Bot-Token · leer lassen = behalten<input name="bot_token" type="password" autocomplete="new-password" placeholder="Token für klickbare Panels"></label><label>Discord-Owner-ID · nur diese Person darf private Alarmregeln verwalten<input name="owner_id" inputmode="numeric" placeholder="Deine Discord-Benutzer-ID"></label><label>Panel-Channel-ID<input name="channel_id" placeholder="Optional: automatisch Panel posten"></label><label>Ping-Ziel<input name="ping_target" placeholder="everyone / none / user:ID / role:ID"></label><label>Website-Adresse<input name="public_url" type="url" placeholder="http://localhost:8787"></label></div><button class="secondary" type="submit">Verbindung speichern</button><p class="note">Geheimnisse werden nur in der lokalen .env gespeichert und nie zurückgegeben. Neue Bot-Zugangsdaten oder ein anderer Panel-Channel werden nach einem Neustart aktiv. Leere Felder behalten die bestehende Einstellung.</p></form></article>
     <article class="card"><div class="card-head"><h2>Deine Regeln</h2></div><div id="rules-list"></div></article>
     <article class="card"><div class="card-head"><h2>Alarmprotokoll</h2></div><div id="alert-log"></div></article>
   </section>
   <section id="merchant" class="page" hidden><article class="merchant-intro"><div class="eyebrow">TAUSCHEN & KALKULIEREN</div><h2>Was kostet dein Ziel wirklich?</h2><p>Wähle die Währung und Menge. Standardmäßig rechnet das Radar mit dem aktuellen Markt-Kaufpreis (BUY-Order); deinen eigenen Preis kannst du pro Material aktivieren.</p></article><div class="merchant-controls"><label>Ich will erhalten<input id="target-amount" type="number" value="1000" min="1"></label><label>Währung<select id="target-currency"><option value="opshards">OPShards</option><option value="redcoins">Redcoins</option></select></label><input id="rate-search" placeholder="Rohstoff suchen …"></div><div id="rates-summary" class="merchant-summary"></div><div id="rates-grid" class="auction-grid"></div></section>
-  <footer>OPSUCHT RADAR <span>SQLite-Archiv · Live-SSE · Community Economy</span></footer>
+  <footer>OPSUCHT EXCHANGE <span>SQLite-Archiv · Live-SSE · Community Economy</span><a class="discord-invite" href="https://discord.gg/RmwFCMdghA" target="_blank" rel="noopener">Discord-Community ↗</a></footer>
 </main>
 <dialog id="detail"><button id="close-detail" class="close" aria-label="Schließen">×</button><div id="detail-content"></div></dialog>
 <div id="toast" role="status" hidden></div>

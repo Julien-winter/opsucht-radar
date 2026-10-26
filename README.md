@@ -1,4 +1,4 @@
-# OPSUCHT Radar — Node.js
+# OPSUCHT Exchange — Node.js
 
 Öffentliche Read-only-Website und dauerhaft speichernder Markt-/Auktionssammler. Der aktive Hosting-Einstiegspunkt ist **`index.js` (Node.js)**. Es wird kein Python-Prozess zum Starten benötigt.
 
@@ -93,3 +93,6 @@ npm test
 ```
 
 Die lokale Testausführung verändert keine Produktionsdaten. Für einen manuellen Integrationscheck kann `DATA_DIR` auf einen neu angelegten temporären Ordner und `RADAR_DISABLE_COLLECTOR=true` gesetzt werden; danach den Ordner vollständig löschen. Der Test sollte Registrierung, Login, `/api/me` und den privaten Zugriff mit dem zurückgegebenen Bearer-Token prüfen. Produktions-`data/` niemals als Testziel verwenden.
+
+
+Discord-Community: https://discord.gg/RmwFCMdghA

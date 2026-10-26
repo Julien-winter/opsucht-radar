@@ -189,3 +189,7 @@
   #detail-content .chart{height:180px;margin:16px 0 6px}
   #detail-content .chart-labels{font-size:9px}
 }
+
+.maintenance-banner{position:sticky;top:0;z-index:30;display:flex;gap:.8rem;align-items:center;padding:.7rem 1rem;background:linear-gradient(90deg,#4b2e83,#1a4965);color:#fff;border-bottom:1px solid rgba(255,255,255,.18);font-size:.9rem}.maintenance-banner strong{letter-spacing:.04em}.maintenance-banner span{opacity:.86}.maintenance-card textarea{width:100%;resize:vertical}
+
+.discord-invite{display:inline-flex;align-items:center;gap:.35rem;color:#a8d8ff;text-decoration:none;font-weight:700;margin-left:.8rem}.discord-invite:hover{text-decoration:underline}

@@ -1,1 +1,1 @@
-# OPSUCHT Radar does not currently require custom R8 rules.
+# OPSUCHT Exchange does not currently require custom R8 rules.

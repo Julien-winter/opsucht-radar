@@ -1,6 +1,6 @@
 {
-  "name": "OPSUCHT Radar",
-  "short_name": "OPSUCHT Radar",
+  "name": "OPSUCHT Exchange",
+  "short_name": "OPSUCHT Exchange",
   "description": "Marktpreise, Auktionen, Itemwerte und Händlerkurse für OPSUCHT.",
   "lang": "de",
   "start_url": "/?source=app",
