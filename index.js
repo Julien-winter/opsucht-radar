@@ -1330,18 +1330,19 @@ function telemetryPayload(data, request) {
     height: Math.max(0, Math.min(10000, Number(data.screen.height) || 0)),
     dpr: Math.max(0, Math.min(10, Number(data.screen.dpr) || 0))
   } : undefined;
-  return {
-    at: new Date().toISOString(),
-    manufacturer,
-    model,
-    platform,
-    os,
-    appVersion,
-    ...(screen ? { screen } : {}),
-    // Deliberately omit IP, raw user-agent, cookies, account/session IDs and
-    // any fields not listed above. The request is only used for rate limiting.
-    source: "opsucht-radar"
-  };
+  const clean = (value, max = 64) => telemetryValue(value).slice(0, max);
+  const viewport = data.viewport && typeof data.viewport === "object" ? { width: Math.max(0, Math.min(10000, Number(data.viewport.width) || 0)), height: Math.max(0, Math.min(10000, Number(data.viewport.height) || 0)) } : undefined;
+  const connection = data.connection && typeof data.connection === "object" ? { effectiveType: clean(data.connection.effectiveType, 16), saveData: Boolean(data.connection.saveData) } : undefined;
+  const event = clean(data.event, 32), page = clean(data.page, 32);
+  const durationSec = Number.isFinite(Number(data.durationSec)) ? Math.max(0, Math.min(86400, Number(data.durationSec))) : undefined;
+  return { at: new Date().toISOString(), manufacturer, model, platform, os, appVersion,
+    ...(event ? { event } : {}), ...(page ? { page } : {}), ...(durationSec !== undefined ? { durationSec } : {}),
+    ...(clean(data.browser, 16) ? { browser: clean(data.browser, 16) } : {}), ...(data.mobile !== undefined ? { mobile: Boolean(data.mobile) } : {}),
+    ...(clean(data.locale, 16) ? { locale: clean(data.locale, 16) } : {}), ...(clean(data.timezone, 48) ? { timezone: clean(data.timezone, 48) } : {}),
+    ...(viewport ? { viewport } : {}), ...(connection ? { connection } : {}),
+    ...(Number.isFinite(Number(data.deviceMemory)) ? { deviceMemory: Math.max(0, Math.min(64, Number(data.deviceMemory))) } : {}),
+    ...(Number.isFinite(Number(data.hardwareConcurrency)) ? { hardwareConcurrency: Math.max(0, Math.min(128, Number(data.hardwareConcurrency))) } : {}),
+    ...(clean(data.colorScheme, 8) ? { colorScheme: clean(data.colorScheme, 8) } : {}), ...(screen ? { screen } : {}), source: "opsucht-radar" };
 }
 
 function saveTelemetry(data, request) {
