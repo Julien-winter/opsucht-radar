@@ -1,5 +1,13 @@
 # OPSUCHT Market – Changelog
 
+## 1.0.7
+
+- Grauer oder leerer WebView beim erneuten Öffnen behoben: pausierte Renderer werden sauber fortgesetzt, validiert und bei einem Renderer-Absturz automatisch neu aufgebaut.
+- Offline-Icons verbessert: lokale OPSUCHT-Icons und erlaubte Item-Icons werden nach einem Online-Refresh im Service-Worker vorgeladen und bleiben zusammen mit den Markt-, ABC- und OPSHARD-Caches verfügbar.
+- Affiliate-Link für Minecraft-Serverhosting ist im Footer und auf der Übersichtsseite sichtbar und als Werbung gekennzeichnet.
+- Mobile Footer-Darstellung und Wiederaufnahme nach App-Wechsel stabilisiert.
+- Keine Standort- oder IP-Datenerfassung ergänzt.
+
 ## 1.0.6
 
 - Android-App aktualisiert und Release-Download direkt in der App verbessert.

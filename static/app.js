@@ -43,6 +43,21 @@ const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuan
 const PRICE_CACHE_PREFIX='opsucht-price-cache-v1:';
 function readPriceCache(key){try{const raw=localStorage.getItem(PRICE_CACHE_PREFIX+key);const parsed=JSON.parse(raw||'');if(!Array.isArray(parsed?.data)||!Number.isFinite(Number(parsed.savedAt)))return null;return {data:parsed.data,savedAt:Number(parsed.savedAt)};}catch{return null;}}
 function writePriceCache(key,data){if(!Array.isArray(data)||!data.length)return;try{localStorage.setItem(PRICE_CACHE_PREFIX+key,JSON.stringify({savedAt:Date.now(),data}));}catch{}}
+function warmIconCache(rows=[]){
+  const urls=[];
+  for(const row of Array.isArray(rows)?rows:[]){
+    const icon=row?.icon||row?.item?.icon;
+    if(icon) urls.push(String(icon));
+  }
+  if(!urls.length||!navigator.serviceWorker)return;
+  const message={type:'CACHE_ICONS',urls:[...new Set(urls)].slice(0,500)};
+  const worker=navigator.serviceWorker.controller;
+  if(worker){worker.postMessage(message);return;}
+  // On a first visit the worker may finish installing after the initial
+  // response. Waiting for ready makes the same online refresh seed icon
+  // assets without requiring a second app launch.
+  navigator.serviceWorker.ready.then(reg=>(reg.active||navigator.serviceWorker.controller)?.postMessage(message)).catch(()=>{});
+}
 function renderCacheNotice(pageName){const host=document.querySelector('#'+pageName);if(!host)return;let note=host.querySelector('.offline-cache-note');const cachedAt=state.cacheMeta[pageName];if(!cachedAt){if(note)note.remove();return;}if(!note){note=document.createElement('div');note.className='offline-cache-note';const anchor=host.querySelector('.toolbar')||host.firstElementChild;host.insertBefore(note,anchor||null);}note.textContent=`Offline gespeicherte Daten · zuletzt online ${date(cachedAt)}. Sobald WLAN verfügbar ist, werden Markt, ABC und OPSHARD-Kurse automatisch aktualisiert.`;}
 function hydratePublicPriceCaches(){
   for(const key of ['market','abc','rates']){
@@ -51,6 +66,7 @@ function hydratePublicPriceCaches(){
     else if(key==='abc'){state.abcPrices=cached.data;state.cacheMeta.abc=cached.savedAt;state.loadedAt.abc=cached.savedAt;}
     else {state.rates=cached.data;state.cacheMeta.rates=cached.savedAt;state.loadedAt.rates=cached.savedAt;}
   }
+  warmIconCache([...state.market,...state.abcPrices,...state.rates]);
 }
 let publicPriceWarmup=false;
 function preloadPublicPrices(){
@@ -60,6 +76,11 @@ function preloadPublicPrices(){
     if(market.status==='fulfilled')writePriceCache('market',market.value);
     if(abc.status==='fulfilled')writePriceCache('abc',abc.value);
     if(rates.status==='fulfilled')writePriceCache('rates',rates.value);
+    warmIconCache([
+      ...(market.status==='fulfilled'?market.value:[]),
+      ...(abc.status==='fulfilled'?abc.value:[]),
+      ...(rates.status==='fulfilled'?rates.value:[])
+    ]);
   }).finally(()=>{publicPriceWarmup=false;});
 }
 
@@ -716,6 +737,16 @@ const initialAuction=new URLSearchParams(location.search).get('auction');
 if(initialAuction)page('auctions',{load:false});
 load().then(async()=>{preloadPublicPrices();if(initialAuction){if(!state.auctions.some(a=>a.uid===initialAuction)){const exact=await api('auctions?uid='+encodeURIComponent(initialAuction));if(exact.length)state.auctions.push(exact[0]);}renderAuctions();showAuction(initialAuction);}}).catch(e=>toast(e.message,true));
 addEventListener('online',()=>preloadPublicPrices(),{passive:true});
+// Android WebViews can restore a suspended page without a full navigation.
+// Repaint the current view after bfcache/app-resume restores to avoid a stale
+// empty layer while keeping the cached price data immediately available.
+addEventListener('pageshow', event => {
+  if (event.persisted) {
+    hydratePublicPriceCaches();
+    requestAnimationFrame(() => { try { renderStatus(); } catch {} });
+    load().catch(error => toast(error.message, true));
+  }
+}, {passive:true});
 // Do not replace large result grids while a user is typing or selecting a filter.
 // The next interval refreshes the data once focus is released.
 setInterval(()=>{if(!document.hidden&&!document.querySelector('input:focus,select:focus,textarea:focus'))load().catch(e=>toast(e.message,true));},30000);

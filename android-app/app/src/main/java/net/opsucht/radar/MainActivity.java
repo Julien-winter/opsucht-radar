@@ -56,6 +56,8 @@ public final class MainActivity extends Activity {
     private String promptedUpdateVersion = "";
     private boolean offlineFallbackAttempted;
     private boolean loadFinished;
+    private boolean rendererRestarting;
+    private boolean backgrounded;
     private long pendingDownloadId = -1L;
     private BroadcastReceiver updateReceiver;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -76,7 +78,13 @@ public final class MainActivity extends Activity {
             if (webView == null) return;
             if ("\"ok\"".equals(value) || "ok".equals(value)) {
                 loadFinished = true;
+                offlineFallbackAttempted = false;
                 mainHandler.removeCallbacks(loadTimeout);
+                // The offline fallback hides the WebView while keeping the
+                // cached document alive. If that document becomes usable
+                // again after resume, reveal it before hiding the fallback;
+                // otherwise the activity can keep showing only its gray root.
+                webView.setVisibility(View.VISIBLE);
                 loadingView.setVisibility(View.GONE);
                 offlineView.setVisibility(View.GONE);
                 refreshLayout.setRefreshing(false);
@@ -122,7 +130,9 @@ public final class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        settings.setUserAgentString(settings.getUserAgentString() + " OPSUCHT-Market-Android/1.0");
+        settings.setLoadsImagesAutomatically(true);
+        settings.setBlockNetworkImage(false);
+        settings.setUserAgentString(settings.getUserAgentString() + " OPSUCHT-Market-Android/" + BuildConfig.VERSION_NAME);
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -158,6 +168,16 @@ public final class MainActivity extends Activity {
             }
             @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse errorResponse) {
                 if (request.isForMainFrame() && errorResponse.getStatusCode() >= 500) showOffline();
+            }
+            @Override public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                // Android may reclaim the WebView renderer while the app is in
+                // the background. A dead renderer cannot be reused and used
+                // to leave the app on a blank/gray screen after reopening.
+                if (!rendererRestarting) {
+                    rendererRestarting = true;
+                    runOnUiThread(() -> recreate());
+                }
+                return true;
             }
         });
 
@@ -231,14 +251,33 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (webView != null) {
+            // WebView is explicitly paused in onStop; resume it before the
+            // first frame so returning to the app never shows a stale gray
+            // surface. Re-check the DOM after a short render opportunity.
+            webView.onResume();
+            webView.resumeTimers();
+            if (offlineView == null || offlineView.getVisibility() != View.VISIBLE) {
+                webView.setVisibility(View.VISIBLE);
+            }
+            // Validate an already loaded page after resume. The first navigation can have an empty body briefly.
+            if (backgrounded) {
+                mainHandler.removeCallbacks(contentCheck);
+                mainHandler.postDelayed(contentCheck, 220);
+            }
+        }
+        backgrounded = false;
         if (refreshLayout != null) refreshLayout.setRefreshing(false);
         if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad();
         // A release may have been published while the app was suspended or
         // offline. Re-check periodically instead of requiring a full restart.
         if (isNetworkAvailable()) checkForUpdate();
     }
-    @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
-    @Override protected void onStop() { if (webView != null) webView.onPause(); super.onStop(); }
+    @Override protected void onPause() { backgrounded = true; if (webView != null) webView.onPause(); super.onPause(); }
+    // onPause() is called before onStop(). Pausing the WebView again here can
+    // leave Android WebView's renderer suspended after returning to the app,
+    // which presents as a grey/empty surface until a process restart.
+    @Override protected void onStop() { super.onStop(); }
     @Override protected void onDestroy() { mainHandler.removeCallbacks(contentCheck); mainHandler.removeCallbacks(loadTimeout); if (updateReceiver != null) { try { unregisterReceiver(updateReceiver); } catch (Exception ignored) {} } updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
 
     /** Checks release metadata only; installation stays with the user. */

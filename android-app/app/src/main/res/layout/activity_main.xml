@@ -23,6 +23,7 @@
     </LinearLayout>
     <TextView android:id="@+id/offline_view" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="center" android:gravity="center" android:padding="32dp"
+        android:drawableTop="@drawable/opsucht_favicon" android:drawablePadding="18dp"
         android:text="OPSUCHT Market\n\nKeine Verbindung zur Website.\nTippen zum erneuten Laden."
         android:textColor="#EDF4F7" android:textSize="16sp" android:lineSpacingExtra="5dp" android:background="@color/radar_background"
         android:visibility="gone" />
