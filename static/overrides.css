@@ -161,10 +161,11 @@
   #market .table-wrap tbody td:first-child{display:block;padding:0 0 11px;border-top:0;text-align:left}
   #market .table-wrap tbody td:not(:first-child)::before{flex:0 0 auto;color:#8498a5;font-size:8px;letter-spacing:.7px;text-transform:uppercase;text-align:left}
   #market .table-wrap tbody td:nth-child(2)::before{content:'Kategorie'}
-  #market .table-wrap tbody td:nth-child(3)::before{content:'Spieler kaufen · BUY'}
-  #market .table-wrap tbody td:nth-child(4)::before{content:'Spieler verkaufen · SELL'}
+  #market .table-wrap tbody td:nth-child(3)::before{content:'BUY'}
+  #market .table-wrap tbody td:nth-child(4)::before{content:'SELL'}
   #market .table-wrap tbody td:nth-child(5)::before{content:'Letzter Handel'}
   #market .table-wrap tbody td:not(:first-child)>*{max-width:62%;overflow-wrap:anywhere}
+  #market .table-wrap tbody td:nth-child(3)>span.price,#market .table-wrap tbody td:nth-child(4)>span.blue{max-width:none;white-space:nowrap;flex:0 0 auto;font-variant-numeric:tabular-nums}
   #market .table-wrap tbody td:first-child .item-name{gap:11px}
   #market .table-wrap tbody td:first-child .item-name img{width:38px;height:38px;flex:none}
   #market .table-wrap tbody td:first-child .item-name b{font-size:13px}

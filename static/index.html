@@ -32,7 +32,7 @@
     <button data-page="catalog"><span class="nav-icon nav-icon-catalog" aria-hidden="true">▣</span><span>Item-Katalog</span></button>
     <button data-page="values"><span class="nav-icon nav-icon-values" aria-hidden="true">◇</span><span>Itemwerte</span></button>
     <button data-page="merchant"><span class="nav-icon nav-icon-merchant" aria-hidden="true">⇄</span><span>Händler-Rechner</span></button>
-    <button data-page="auth"><span class="nav-icon nav-icon-alerts" aria-hidden="true">♙</span><span>Discord-Alarme</span></button>
+    <button data-page="auth"><span class="nav-icon nav-icon-alerts" aria-hidden="true">♙</span><span>Account</span></button>
   </nav>
   <div class="sidebar-bottom"><span class="dot"></span> <span id="side-status">Sammler verbindet …</span><small>Community-Daten aus öffentlichen OPSUCHT-APIs</small></div>
 </aside>
@@ -52,8 +52,8 @@
     <div class="toolbar"><input id="market-search" placeholder="Item suchen, z. B. Diamant …"><select id="market-sort"><option value="name">Name A–Z</option><option value="buy">BUY-Preis absteigend</option><option value="sell">SELL-Preis absteigend</option></select><span id="market-count" class="muted"></span></div>
     <div id="market-category-filter" class="category-filter" aria-label="Marktkategorie filtern"></div>
     <div id="market-summary" class="market-summary"></div>
-    <p class="note">„Spieler kaufen“ zeigt aktive BUY-Orders, „Spieler verkaufen“ aktive SELL-Orders. Der letzte Handelsschnitt stammt aus abgeschlossenen Trades. Item anklicken für den Preisverlauf.</p>
-    <div class="card table-wrap"><table><thead><tr><th>Item</th><th>Kategorie</th><th>Spieler kaufen · BUY</th><th>Spieler verkaufen · SELL</th><th>Ø letzter Handel</th></tr></thead><tbody id="market-body"></tbody></table></div>
+    <p class="note">BUY und SELL zeigen die aktiven Orderseiten. Der letzte Handelsschnitt stammt aus abgeschlossenen Trades. Item anklicken für den Preisverlauf.</p>
+    <div class="card table-wrap"><table><thead><tr><th>Item</th><th>Kategorie</th><th>BUY</th><th>SELL</th><th>Ø letzter Handel</th></tr></thead><tbody id="market-body"></tbody></table></div>
   </section>
   <section id="abc" class="page" hidden>
     <div id="abc-summary" class="market-summary"></div>
