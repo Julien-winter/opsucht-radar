@@ -1,5 +1,13 @@
 # OPSUCHT Market – Changelog
 
+## 1.0.8
+
+- Update-Download verbessert: Nach dem Download öffnet „Jetzt installieren“ direkt den Android-Paketinstaller.
+- Die Benachrichtigung enthält einen echten Installationsbutton und funktioniert auch nach einem App-Neustart weiter.
+- Fehlende Installationsfreigaben werden verständlich zur Android-Einstellung geführt; fehlgeschlagene Downloads werden erkannt.
+- Scrollen stabilisiert und WebView-Überlauf sowie Renderer-Priorität für weniger eingefrorene Bilder angepasst.
+- Itemwerte werden zunächst in kleineren Batches gerendert; weitere Karten laden erst auf Wunsch. Suchfelder rendern mit weniger Arbeit pro Tastendruck.
+
 ## 1.0.7
 
 - Grauer oder leerer WebView beim erneuten Öffnen behoben: pausierte Renderer werden sauber fortgesetzt, validiert und bei einem Renderer-Absturz automatisch neu aufgebaut.

@@ -3,10 +3,15 @@ package net.opsucht.radar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.ConnectivityManager;
@@ -16,6 +21,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.view.Window;
 import android.view.View;
 import android.webkit.WebChromeClient;
@@ -45,6 +51,11 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 public final class MainActivity extends Activity {
+    private static final String UPDATE_CHANNEL = "updates";
+    private static final String ACTION_INSTALL_UPDATE = "net.opsucht.radar.INSTALL_UPDATE";
+    private static final int NOTIFICATION_PERMISSION_REQUEST = 1708;
+    private static final String UPDATE_PREFS = "update-download";
+    private static final String UPDATE_ID = "download-id";
     private WebView webView;
     private SwipeRefreshLayout refreshLayout;
     private TextView offlineView;
@@ -133,6 +144,8 @@ public final class MainActivity extends Activity {
         settings.setLoadsImagesAutomatically(true);
         settings.setBlockNetworkImage(false);
         settings.setUserAgentString(settings.getUserAgentString() + " OPSUCHT-Market-Android/" + BuildConfig.VERSION_NAME);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        if (Build.VERSION.SDK_INT >= 26) webView.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true);
 
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -186,6 +199,11 @@ public final class MainActivity extends Activity {
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> openExternalIfNeeded(Uri.parse(url)));
         webView.loadUrl(BuildConfig.RADAR_URL);
         registerUpdateReceiver();
+        recoverCompletedDownload();
+        handleInstallIntent(getIntent());
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIFICATION_PERMISSION_REQUEST);
+        }
         checkForUpdate();
     }
 
@@ -196,12 +214,114 @@ public final class MainActivity extends Activity {
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
                 if (id != pendingDownloadId) return;
                 pendingDownloadId = -1L;
-                Toast.makeText(MainActivity.this, "APK-Download abgeschlossen. Öffne die Benachrichtigung zum Installieren.", Toast.LENGTH_LONG).show();
+                getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_ID).apply();
+                DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                Uri apk = manager == null ? null : manager.getUriForDownloadedFile(id);
+                if (apk == null) {
+                    Toast.makeText(MainActivity.this, "APK-Download fehlgeschlagen. Bitte erneut versuchen.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                showInstallNotification(apk);
+                new AlertDialog.Builder(MainActivity.this)
+                    .setTitle("Update bereit")
+                    .setMessage("Die neue OPSUCHT-Market-Version wurde heruntergeladen.")
+                    .setNegativeButton("Später", null)
+                    .setPositiveButton("Jetzt installieren", (dialog, which) -> installApk(apk))
+                    .show();
             }
         };
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(updateReceiver, filter);
+    }
+
+    private void showInstallNotification(Uri apk) {
+        // Route the notification back through this activity. That way a tap
+        // also handles Android's "install unknown apps" permission instead
+        // of silently failing inside the package installer.
+        Intent install = new Intent(this, MainActivity.class);
+        install.setAction(ACTION_INSTALL_UPDATE).setData(apk);
+        install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pending = PendingIntent.getActivity(this, 1707, install,
+            PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
+        NotificationManager notifications = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (notifications == null) return;
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = new NotificationChannel(UPDATE_CHANNEL, "App-Updates", NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("Neue OPSUCHT-Market-Versionen");
+            notifications.createNotificationChannel(channel);
+        }
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
+            ? new Notification.Builder(this, UPDATE_CHANNEL)
+            : new Notification.Builder(this);
+        builder.setSmallIcon(R.drawable.opsucht_favicon)
+            .setContentTitle("OPSUCHT Market · Update bereit")
+            .setContentText("Tippen, um die APK zu installieren")
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .setCategory(Notification.CATEGORY_PROGRESS);
+        if (Build.VERSION.SDK_INT < 33 || checkSelfPermission("android.permission.POST_NOTIFICATIONS") == PackageManager.PERMISSION_GRANTED) {
+            notifications.notify(1707, builder.build());
+        }
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleInstallIntent(intent);
+    }
+
+    private void handleInstallIntent(Intent intent) {
+        if (intent == null || !ACTION_INSTALL_UPDATE.equals(intent.getAction())) return;
+        Uri apk = intent.getData();
+        if (apk != null) installApk(apk);
+    }
+
+    private void installApk(Uri apk) {
+        if (apk == null) return;
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            try {
+                Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName()));
+                startActivity(settings);
+                Toast.makeText(this, "Erlaube die Installation unbekannter Apps und tippe danach erneut auf das Update.", Toast.LENGTH_LONG).show();
+            } catch (Exception ignored) {
+                Toast.makeText(this, "Installation blockiert. Öffne die APK bitte aus Downloads.", Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+        Intent install = new Intent(Intent.ACTION_VIEW, apk);
+        install.setDataAndType(apk, "application/vnd.android.package-archive");
+        install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(install);
+        } catch (Exception error) {
+            Toast.makeText(this, "Kein Paket-Installer verfügbar. Öffne die Datei bitte aus Downloads.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Recover a completed update if Android killed the activity during download. */
+    private void recoverCompletedDownload() {
+        long id = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).getLong(UPDATE_ID, -1L);
+        if (id < 0L) return;
+        DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+        if (manager == null) return;
+        try (android.database.Cursor cursor = manager.query(new DownloadManager.Query().setFilterById(id))) {
+            if (cursor == null || !cursor.moveToFirst()) return;
+            int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+            if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                pendingDownloadId = id;
+                Uri apk = manager.getUriForDownloadedFile(id);
+                if (apk != null) {
+                    pendingDownloadId = -1L;
+                    getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_ID).apply();
+                    showInstallNotification(apk);
+                }
+            } else if (status == DownloadManager.STATUS_FAILED) {
+                getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_ID).apply();
+            }
+        } catch (Exception ignored) { }
     }
 
     private boolean openExternalIfNeeded(Uri uri) {
@@ -354,6 +474,7 @@ public final class MainActivity extends Activity {
             DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
             if (manager == null) throw new IllegalStateException("Download-Dienst nicht verfügbar");
             pendingDownloadId = manager.enqueue(request);
+            getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().putLong(UPDATE_ID, pendingDownloadId).apply();
             Toast.makeText(this, "Download gestartet. Die Android-Benachrichtigung öffnet die APK danach.", Toast.LENGTH_LONG).show();
         } catch (Exception error) { Toast.makeText(this, "Download konnte nicht gestartet werden.", Toast.LENGTH_LONG).show(); }
     }
