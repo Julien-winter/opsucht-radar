@@ -1,5 +1,10 @@
 # OPSUCHT Market – Changelog
 
+## 1.0.9
+
+- Android-App nutzt jetzt exakt das aktuelle OPSUCHT-Icon der Website als Launcher- und Benachrichtigungs-Icon.
+- Das alte abweichende Favicon wurde aus der APK entfernt.
+
 ## 1.0.8
 
 - Update-Download verbessert: Nach dem Download öffnet „Jetzt installieren“ direkt den Android-Paketinstaller.
