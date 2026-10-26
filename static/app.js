@@ -28,7 +28,11 @@ document.addEventListener('error', event => {
   if (img.nextElementSibling) img.nextElementSibling.hidden = false;
 }, true);
 const allowedIconHosts=new Set(['img.mc-api.io','items.opsucht.net','mc-api.io']);
-const iconUrl=(value)=>{const raw=String(value||'').trim();if(raw.startsWith('/'))return raw;try{const parsed=new URL(raw,location.origin);return parsed.protocol==='https:'&&allowedIconHosts.has(parsed.hostname)?parsed.href:'';}catch{return ''}};
+// OPSUCHT currently serves the dashboard over HTTP.  Accept both protocols
+// for the allow-listed icon hosts so custom OPSHARD icons are not silently
+// replaced by the generic fallback.  The host allow-list still prevents
+// arbitrary remote image URLs from being injected into the UI.
+const iconUrl=(value)=>{const raw=String(value||'').trim();if(raw.startsWith('/'))return raw;try{const parsed=new URL(raw,location.origin);return (parsed.protocol==='https:'||parsed.protocol==='http:')&&allowedIconHosts.has(parsed.hostname)?parsed.href:'';}catch{return ''}};
 const image = (url, fallback='') => {const primary=iconUrl(url),safeFallback=iconUrl(fallback)||'/static/opsucht-mark.svg';if(!primary)return `<img src="${esc(safeFallback)}" loading="lazy" alt="" data-fallback="/static/opsucht-mark.svg"><span class="icon-fallback" aria-hidden="true" hidden>◇</span>`;return `<img src="${esc(primary)}" loading="lazy" alt="" data-fallback="${esc(safeFallback)}"><span class="icon-fallback" aria-hidden="true" hidden>◇</span>`;};
 const empty = text => `<div class="empty">${esc(text)}</div>`;
 const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuantities:{}, auctions:[], categories:[], catalog:[], values:[], rules:[], alerts:[], rates:[], status:{}, profiles:{}, marketCategory:'', merchantCategory:'', auctionCategoryRoot:'', auctionCategorySub:'', auctionCategoryType:'', auctionEnchantFilter:'', auctionEnchantQuery:'', valueCategoryRoot:'', catalogCategoryRoot:'', catalogSource:'all', shown:60, abcShown:60, catalogShown:60, merchantShown:12, token:localStorage.getItem('radar-user-token')||'', user:null, userRules:[], userAlerts:[], minecraftChallenge:null, activeHistory:null, loadedAt:{}};
