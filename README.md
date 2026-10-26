@@ -24,7 +24,6 @@ Für deine Zuweisung ist die öffentliche Adresse `http://45.93.249.214:63816`. 
 ## Website
 
 - Marktpreise mit Kategorie-Chips, 24-Stunden-Vergleich, Orderzahlen und Preisverlauf.
-- ABC-/sw-abc-Referenzpreise werden aus `Kn0cki/sw_abc_prices` synchronisiert und im Itemdetail getrennt von den aktuellen OPSUCHT-BUY/SELL-Orders angezeigt.
 - Alle aktiven Auktionen, inklusive normaler Gebote ohne Sofortkauf, Bieter, Skins und Itemdetails.
 - Item-Katalog mit 444 Marktmaterialien plus Items/Varianten, die in aktiven oder archivierten öffentlichen Auktionen und bestätigten Verkäufen beobachtet wurden. **Die OPSUCHT-API veröffentlicht keine vollständige Shop-/Inventar-Itemdatenbank**, daher können nie öffentlich gelistete Items nicht vorab aufgelistet werden.
 - Filterkette Hauptkategorie → Unterkategorie → Typ, zum Beispiel Werkzeuge → Spitzhacken; Spezial-Verzauberungsfilter passen sich der aktuellen Auktionensuche an.
@@ -56,23 +55,6 @@ tar -czf "radar-data-$(date +%Y%m%d-%H%M).tar.gz" -C /home/container data
 ```
 
 Auf Windows sollte der Prozess vor dem Kopieren kurz angehalten oder die SQLite-Datei über einen Snapshot gesichert werden. Niemals `data/`, `radar.sqlite` oder die `.corrupt-*`-Sicherungen beim Deploy-Schritt löschen. `data/` ist absichtlich von Git ignoriert und gehört in den Backup-Plan des Hosters.
-
-## Private Discord-Alarme
-
-### Minecraft-Besitzprüfung
-
-Die Website akzeptiert keine manuelle Code-Eingabe mehr als Verifizierung. Nach der Mojang-Profilprüfung zeigt sie einen zehn Minuten gültigen `/link <Code>`-Befehl. Der Nutzer führt diesen Befehl mit dem eigenen Minecraft-Konto ingame aus. Das OPSUCHT-Minecraft-Plugin muss die erfolgreiche Ingame-Prüfung anschließend serverseitig an `POST /api/integrations/minecraft/verify` melden. Dafür wird auf Website und Plugin dasselbe geheime `MINECRAFT_LINK_SECRET` gesetzt; der Request nutzt `Authorization: Bearer <Secret>` und enthält `code`, `uuid` und `username`. Erst diese Servermeldung setzt `minecraft_verified=1`. Ohne die Plugin-Anbindung bleibt der Status bewusst „Besitz offen“.
-
-Der Webhook bleibt ausschließlich in einer Server-Environment-Variable oder deiner privaten `.env`; er wird nicht in die Website oder öffentliche Statusantworten geschrieben. Der bereits im Chat geteilte Webhook sollte vor dem Hosting neu erstellt werden.
-
-Standardregeln:
-- Modpicke: Sofortkauf strikt unter **1.700.000 $**.
-- Modpicke: aktuelles Höchstgebot strikt unter **1.500.000 $**, wenn noch **10–20 Minuten** verbleiben.
-- `SaikoWasTaken`: privater Outbid-Ping bei erkanntem Höchstbieter-Wechsel.
-
-Discord-Zeitstempel zeigen die Restzeit automatisch in der jeweiligen Zeitzone. Der Link öffnet die passende Auktion auf der gehosteten Website.
-
-Für Buttons/Slash-Command `/panel` zusätzlich `DISCORD_BOT_TOKEN` und `DISCORD_OWNER_ID` setzen. `DISCORD_OWNER_ID` beschränkt Verwaltung und Einsicht in persönliche Regeln auf dich.
 
 ## Umgebungsvariablen
 
