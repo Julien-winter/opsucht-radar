@@ -59,6 +59,25 @@ public final class MainActivity extends Activity {
             }
         }
     };
+    private final Runnable contentCheck = () -> {
+        if (webView == null || offlineView == null) return;
+        webView.evaluateJavascript("(function(){var b=document.body;return b&&((b.innerText||'').trim().length>20)?'ok':'empty';})()", value -> {
+            if (webView == null) return;
+            if ("\"ok\"".equals(value) || "ok".equals(value)) {
+                loadFinished = true;
+                mainHandler.removeCallbacks(loadTimeout);
+                loadingView.setVisibility(View.GONE);
+                offlineView.setVisibility(View.GONE);
+                refreshLayout.setRefreshing(false);
+            } else if (!offlineFallbackAttempted) {
+                offlineFallbackAttempted = true;
+                webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+                webView.reload();
+            } else {
+                showOffline();
+            }
+        });
+    };
 
     @Override
     protected void onCreate(Bundle state) {
@@ -110,11 +129,11 @@ public final class MainActivity extends Activity {
                 mainHandler.postDelayed(loadTimeout, 12000);
             }
             @Override public void onPageFinished(WebView view, String url) {
-                loadFinished = true;
-                mainHandler.removeCallbacks(loadTimeout);
-                loadingView.setVisibility(View.GONE);
-                offlineView.setVisibility(View.GONE);
-                refreshLayout.setRefreshing(false);
+                // WebView can report a successful navigation while rendering an
+                // empty document (the former black-screen failure). Verify that
+                // the app actually rendered content before removing the overlay.
+                mainHandler.removeCallbacks(contentCheck);
+                mainHandler.postDelayed(contentCheck, 350);
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
@@ -154,6 +173,7 @@ public final class MainActivity extends Activity {
         refreshLayout.setRefreshing(false);
         offlineView.setVisibility(View.VISIBLE);
         offlineView.setOnClickListener(v -> retryLoad());
+        offlineView.setText("OPSUCHT Radar konnte nicht geladen werden.\nTippen zum erneuten Versuch");
     }
 
     private void retryLoad() {

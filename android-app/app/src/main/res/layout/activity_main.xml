@@ -5,7 +5,8 @@
     android:background="@color/radar_background">
     <net.opsucht.radar.VerticalSwipeRefreshLayout
         android:id="@+id/refresh_layout" android:layout_width="match_parent" android:layout_height="match_parent">
-        <WebView android:id="@+id/web_view" android:layout_width="match_parent" android:layout_height="match_parent" />
+        <WebView android:id="@+id/web_view" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:background="@color/radar_background" android:visibility="visible" />
     </net.opsucht.radar.VerticalSwipeRefreshLayout>
     <LinearLayout android:id="@+id/loading_view" android:layout_width="match_parent" android:layout_height="match_parent"
         android:layout_gravity="center" android:gravity="center" android:orientation="vertical"
