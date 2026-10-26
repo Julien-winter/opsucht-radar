@@ -34,40 +34,42 @@ const empty = text => `<div class="empty">${esc(text)}</div>`;
 const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuantities:{}, auctions:[], categories:[], catalog:[], values:[], rules:[], alerts:[], rates:[], status:{}, profiles:{}, marketCategory:'', merchantCategory:'', auctionCategoryRoot:'', auctionCategorySub:'', auctionCategoryType:'', auctionEnchantFilter:'', auctionEnchantQuery:'', valueCategoryRoot:'', catalogCategoryRoot:'', catalogSource:'all', shown:60, abcShown:60, catalogShown:60, merchantShown:12, token:localStorage.getItem('radar-user-token')||'', user:null, userRules:[], userAlerts:[], minecraftChallenge:null, activeHistory:null, loadedAt:{}};
 
 // Optional telemetry is opt-in and intentionally separate from login state.
-// Store the choice locally so the banner never blocks normal use after a
-// decision. Only coarse, non-identifying device information is sent.
+// Events are coarse, non-identifying and queued locally while offline.
 const TELEMETRY_CONSENT_KEY = 'opsucht-telemetry-consent-v1';
+const TELEMETRY_QUEUE_KEY = 'opsucht-telemetry-queue-v1';
+const telemetryStartedAt = Date.now();
+let telemetryFlushBusy = false;
 function telemetryConsent(){return localStorage.getItem(TELEMETRY_CONSENT_KEY)==='granted';}
+function telemetryQueue(){try{const q=JSON.parse(localStorage.getItem(TELEMETRY_QUEUE_KEY)||'[]');return Array.isArray(q)?q.slice(-40):[];}catch{return[];}}
+function telemetryConnection(){const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;return c?{effectiveType:String(c.effectiveType||'unknown').slice(0,16),saveData:Boolean(c.saveData),downlink:Number.isFinite(Number(c.downlink))?Math.min(100,Number(c.downlink)):undefined}:undefined;}
 function deviceTelemetry(){
   const ua=String(navigator.userAgent||''), platform=String(navigator.userAgentData?.platform||navigator.platform||'unknown');
   const mobile=Boolean(navigator.userAgentData?.mobile||/Android|iPhone|iPad|Mobile/i.test(ua));
   let model='unknown', manufacturer='unknown';
   const android=ua.match(/Android[^;)]*;\s*(?:[a-z]{2,3}-[A-Z]{2,3};\s*)?(?:wv;\s*)?([^;)]+?)\s+Build\//i);
   if(android){model=android[1].trim();const m=model.toLowerCase();manufacturer=/samsung|sm-[a-z0-9-]+/.test(m)?'samsung':/pixel|google/.test(m)?'google':/xiaomi|redmi|poco/.test(m)?'xiaomi':/huawei|honor/.test(m)?'huawei':/oneplus/.test(m)?'oneplus':'android';}
-  else if(/iPhone/i.test(ua)){manufacturer='apple';model='iphone';}
-  else if(/iPad/i.test(ua)){manufacturer='apple';model='ipad';}
+  else if(/iPhone/i.test(ua)){manufacturer='apple';model='iphone';} else if(/iPad/i.test(ua)){manufacturer='apple';model='ipad';}
   else {manufacturer=/Macintosh/i.test(ua)?'apple':/Windows/i.test(ua)?'microsoft':/Linux/i.test(ua)?'linux':'unknown';model=mobile?'mobile':'desktop';}
   const browser=/Edg\//.test(ua)?'edge':/Firefox\//.test(ua)?'firefox':/Chrome\//.test(ua)?'chrome':/Safari\//.test(ua)?'safari':'other';
-  return {consent:true,manufacturer,model,platform,os:platform,browser,mobile,appVersion:'web',screen:{width:Math.min(10000,screen.width||0),height:Math.min(10000,screen.height||0),dpr:Math.min(10,window.devicePixelRatio||1)}};
+  return {consent:true,manufacturer,model,platform,os:platform,browser,mobile,appVersion:'web',locale:String(navigator.language||'unknown').slice(0,16),timezone:String(Intl.DateTimeFormat().resolvedOptions().timeZone||'unknown').slice(0,48),viewport:{width:Math.min(10000,innerWidth||0),height:Math.min(10000,innerHeight||0)},screen:{width:Math.min(10000,screen.width||0),height:Math.min(10000,screen.height||0),dpr:Math.min(10,devicePixelRatio||1)},deviceMemory:Number.isFinite(Number(navigator.deviceMemory))?Math.min(64,Number(navigator.deviceMemory)):undefined,hardwareConcurrency:Number.isFinite(Number(navigator.hardwareConcurrency))?Math.min(128,Number(navigator.hardwareConcurrency)):undefined,colorScheme:matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light',connection:telemetryConnection()};
 }
-async function sendTelemetry(){
-  if(!telemetryConsent()||sessionStorage.getItem('opsucht-telemetry-sent')==='1')return;
-  try{const payload=deviceTelemetry(),r=await fetch('/api/telemetry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true});if(r.ok)sessionStorage.setItem('opsucht-telemetry-sent','1');}catch{}
-}
+function queueTelemetry(event, extra={}){if(!telemetryConsent())return;const item={...deviceTelemetry(),event:String(event).slice(0,32),at:new Date().toISOString(),...extra};const q=telemetryQueue();q.push(item);try{localStorage.setItem(TELEMETRY_QUEUE_KEY,JSON.stringify(q.slice(-40)));}catch{};flushTelemetry();}
+async function flushTelemetry(){if(telemetryFlushBusy||!telemetryConsent()||!navigator.onLine)return;const q=telemetryQueue();if(!q.length)return;telemetryFlushBusy=true;try{const r=await fetch('/api/telemetry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(q[0]),keepalive:true});if(r.ok){q.shift();localStorage.setItem(TELEMETRY_QUEUE_KEY,JSON.stringify(q));if(q.length)await flushTelemetry();}}catch{}finally{telemetryFlushBusy=false;}}
+function sendTelemetry(){queueTelemetry('session_start');}
 function initPrivacyControls(){
   const banner=$('#consent-banner'),dialog=$('#privacy-dialog'),toggle=$('#telemetry-consent');
   const show=()=>{if(banner)banner.hidden=false;};
-  const apply=granted=>{if(granted)localStorage.setItem(TELEMETRY_CONSENT_KEY,'granted');else{localStorage.removeItem(TELEMETRY_CONSENT_KEY);sessionStorage.removeItem('opsucht-telemetry-sent');}if(banner)banner.hidden=true;if(toggle)toggle.checked=granted;if(granted)sendTelemetry();};
+  const apply=granted=>{if(granted)localStorage.setItem(TELEMETRY_CONSENT_KEY,'granted');else{localStorage.removeItem(TELEMETRY_CONSENT_KEY);localStorage.removeItem(TELEMETRY_QUEUE_KEY);}if(banner)banner.hidden=true;if(toggle)toggle.checked=granted;if(granted){sendTelemetry();flushTelemetry();}};
   if(!localStorage.getItem(TELEMETRY_CONSENT_KEY))show();
-  $('#consent-accept')?.addEventListener('click',()=>apply(true));
-  $('#consent-reject')?.addEventListener('click',()=>apply(false));
-  $('#privacy-settings')?.addEventListener('click',()=>{if(!dialog)return;toggle.checked=telemetryConsent();dialog.showModal();});
-  $('#privacy-close')?.addEventListener('click',()=>dialog?.close());
+  $('#consent-accept')?.addEventListener('click',()=>apply(true)); $('#consent-reject')?.addEventListener('click',()=>apply(false));
+  $('#privacy-settings')?.addEventListener('click',()=>{if(!dialog)return;toggle.checked=telemetryConsent();dialog.showModal();}); $('#privacy-close')?.addEventListener('click',()=>dialog?.close());
   $('#privacy-save')?.addEventListener('click',()=>{apply(Boolean(toggle?.checked));dialog?.close();});
-  $('#privacy-delete')?.addEventListener('click',()=>{localStorage.removeItem(TELEMETRY_CONSENT_KEY);sessionStorage.removeItem('opsucht-telemetry-sent');if(toggle)toggle.checked=false;dialog?.close();show();toast('Optionale Statistik ist deaktiviert. Bereits aggregierte Serverdaten können nicht über den Browser einzelnen Personen zugeordnet werden.');});
-  if(telemetryConsent())sendTelemetry();
-}
-// Incremented for every modal request so a slower response cannot overwrite a
+  $('#privacy-delete')?.addEventListener('click',()=>{apply(false);if(toggle)toggle.checked=false;dialog?.close();show();toast('Optionale Statistik und lokale Warteschlange wurden gelöscht.');});
+  if(telemetryConsent())flushTelemetry();
+  addEventListener('online',flushTelemetry,{passive:true});
+  addEventListener('visibilitychange',()=>{if(document.hidden)queueTelemetry('session_end',{durationSec:Math.min(86400,Math.round((Date.now()-telemetryStartedAt)/1000))});else queueTelemetry('visibility',{state:'visible'});},{passive:true});
+  addEventListener('pagehide',()=>queueTelemetry('session_end',{durationSec:Math.min(86400,Math.round((Date.now()-telemetryStartedAt)/1000))}),{passive:true});
+}// Incremented for every modal request so a slower response cannot overwrite a
 // detail view that the user has already replaced with another item.
 let detailRequestId = 0;
 let toastTimer;
@@ -114,6 +116,7 @@ const pages = {
 };
 function page(name, options={}) {
   state.page=name;
+  if (telemetryConsent()) queueTelemetry('page_view',{page:String(name).slice(0,32)});
   document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==name);
   document.querySelectorAll('nav button').forEach(b=>{const selected=b.dataset.page===name;b.classList.toggle('selected',selected);b.setAttribute('aria-current',selected?'page':'false');});
   $('#title').textContent=pages[name][0]; $('#subtitle').textContent=pages[name][1]; $('#crumb').textContent=pages[name][2];
