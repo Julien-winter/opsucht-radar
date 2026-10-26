@@ -7,3 +7,9 @@ OPSUCHT-Radar.apk
 radar.sqlite*
 __pycache__/
 *.log
+
+# Build/release outputs (publish through GitHub Releases, never source)
+*.apk
+*.aab
+*.zip
+releases/

@@ -35,7 +35,15 @@ const allowedIconHosts=new Set(['img.mc-api.io','items.opsucht.net','mc-api.io']
 const iconUrl=(value)=>{const raw=String(value||'').trim();if(raw.startsWith('/'))return raw;try{const parsed=new URL(raw,location.origin);return (parsed.protocol==='https:'||parsed.protocol==='http:')&&allowedIconHosts.has(parsed.hostname)?parsed.href:'';}catch{return ''}};
 const image = (url, fallback='') => {const primary=iconUrl(url),safeFallback=iconUrl(fallback)||'/static/opsucht-mark.svg';if(!primary)return `<img src="${esc(safeFallback)}" loading="lazy" alt="" data-fallback="/static/opsucht-mark.svg"><span class="icon-fallback" aria-hidden="true" hidden>◇</span>`;return `<img src="${esc(primary)}" loading="lazy" alt="" data-fallback="${esc(safeFallback)}"><span class="icon-fallback" aria-hidden="true" hidden>◇</span>`;};
 const empty = text => `<div class="empty">${esc(text)}</div>`;
-const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuantities:{}, auctions:[], categories:[], catalog:[], values:[], rules:[], alerts:[], rates:[], status:{}, profiles:{}, marketCategory:'', merchantCategory:'', auctionCategoryRoot:'', auctionCategorySub:'', auctionCategoryType:'', auctionEnchantFilter:'', auctionEnchantQuery:'', valueCategoryRoot:'', catalogCategoryRoot:'', catalogSource:'all', shown:60, abcShown:60, catalogShown:60, merchantShown:12, token:localStorage.getItem('radar-user-token')||'', user:null, userRules:[], userAlerts:[], minecraftChallenge:null, activeHistory:null, loadedAt:{}};
+const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuantities:{}, auctions:[], categories:[], catalog:[], values:[], rules:[], alerts:[], rates:[], status:{}, profiles:{}, marketCategory:'', merchantCategory:'', auctionCategoryRoot:'', auctionCategorySub:'', auctionCategoryType:'', auctionEnchantFilter:'', auctionEnchantQuery:'', valueCategoryRoot:'', catalogCategoryRoot:'', catalogSource:'all', shown:60, abcShown:60, catalogShown:60, merchantShown:12, token:localStorage.getItem('radar-user-token')||'', user:null, userRules:[], userAlerts:[], minecraftChallenge:null, activeHistory:null, loadedAt:{}, cacheMeta:{}};
+
+// Market and ABC data remain useful when the phone temporarily has no network.
+// Successful public responses are cached; auctions are deliberately excluded
+// so an offline view never looks like a live listing.
+const PRICE_CACHE_PREFIX='opsucht-price-cache-v1:';
+function readPriceCache(key){try{const raw=localStorage.getItem(PRICE_CACHE_PREFIX+key);const parsed=JSON.parse(raw||'');if(!Array.isArray(parsed?.data)||!Number.isFinite(Number(parsed.savedAt)))return null;return {data:parsed.data,savedAt:Number(parsed.savedAt)};}catch{return null;}}
+function writePriceCache(key,data){if(!Array.isArray(data)||!data.length)return;try{localStorage.setItem(PRICE_CACHE_PREFIX+key,JSON.stringify({savedAt:Date.now(),data}));}catch{}}
+function renderCacheNotice(pageName){const host=document.querySelector('#'+pageName);if(!host)return;let note=host.querySelector('.offline-cache-note');const cachedAt=state.cacheMeta[pageName];if(!cachedAt){if(note)note.remove();return;}if(!note){note=document.createElement('div');note.className='offline-cache-note';const anchor=host.querySelector('.toolbar')||host.firstElementChild;host.insertBefore(note,anchor||null);}note.textContent=`Offline gespeicherte Preisdaten · zuletzt online ${date(cachedAt)}. Aktualisieren sobald WLAN verfügbar ist.`;}
 
 // Optional telemetry is opt-in and intentionally separate from login state.
 // Events are coarse, non-identifying and queued locally while offline.
@@ -158,9 +166,11 @@ const pages = {
   merchant:['Mehr Währung fürs Geld.','Umtauschkurse vergleichen und deine Rohstoffkosten kalkulieren.','Händler-Rechner']
 };
 function page(name, options={}) {
-  const loginOnlyPages = new Set(['market','abc','catalog','values','merchant']);
+  // Published market/ABC/OPSHARD rates are public. Auction-derived item
+  // valuations and their histories remain account-only.
+  const loginOnlyPages = new Set(['catalog','values']);
   if (loginOnlyPages.has(name) && !state.token) {
-    toast('Für Marktpreise, Itemwerte und Händlerdaten bitte zuerst anmelden.', true);
+    toast('Für geschätzte Itemwerte aus Auktionsverkäufen bitte zuerst anmelden.', true);
     name = 'auth';
     options = { ...options, load: false };
   }
@@ -201,6 +211,12 @@ function renderStatus() {
   const maintenanceToggle=$('#maintenance-enabled'),maintenanceMessage=$('#maintenance-message'),maintenanceTag=$('#maintenance-status');if(maintenanceToggle&&s.maintenance){maintenanceToggle.checked=Boolean(s.maintenance.enabled);maintenanceMessage.value=s.maintenance.message||'';maintenanceTag.textContent=s.maintenance.enabled?'AKTIV':'AUS';maintenanceTag.classList.toggle('tag-active',Boolean(s.maintenance.enabled));}
   $('#live').textContent=s.stream ? '● DATEN AKTUELL' : stale ? '● VERBINDUNG PRÜFEN' : '● AKTUALISIERUNG AKTIV';
   $('#side-status').textContent=s.stream ? 'Auktionsfeed verbunden' : 'Aktualisierung / Wiederverbindung';
+  let sponsor=document.querySelector('#sponsor-slot');
+  if(s.sponsor?.enabled){
+    if(!sponsor){sponsor=document.createElement('article');sponsor.id='sponsor-slot';sponsor.className='sponsor-card';const overview=document.querySelector('#overview');overview?.append(sponsor);}
+    sponsor.innerHTML=`<small>COMMUNITY-SPONSOR</small><h3>${esc(s.sponsor.title||'Unterstützer')}</h3><p>${esc(s.sponsor.text||'Unterstützt OPSUCHT Market')}</p><a href="${esc(s.sponsor.url)}" target="_blank" rel="noopener sponsored">Mehr erfahren ↗</a>`;
+    sponsor.hidden=false;
+  } else if(sponsor) sponsor.hidden=true;
   $('#stats').innerHTML=[['Marktitems',s.market_items ?? 0,'Alle handelbaren Materialien'],['Aktive Auktionen',s.active_auctions ?? 0,'Live + Snapshot-Abgleich'],['Bestätigte Verkäufe',s.sales ?? 0,'Grundlage deiner Itemwerte'],['Verlaufspunkte',s.history_points ?? 0,'Historische Trades archiviert']].map(([label,value,caption])=>`<div class="stat"><small>${label}</small><b>${num(value)}</b><span>${caption}</span></div>`).join('');
   const marketItems=Number(s.market_items)||0,historyItems=Number(s.history_items)||0;
   const progress=marketItems ? Math.round(100*historyItems/marketItems) : 0;
@@ -553,20 +569,45 @@ async function load() {
   if(refreshButton){refreshButton.disabled=true;refreshButton.dataset.previousLabel=refreshButton.textContent;refreshButton.textContent='↻ Lädt …';refreshButton.setAttribute('aria-busy','true');}
   const pageAtStart=state.page;
   try{
-    state.status=(await api('status'))||{};renderStatus();if(state.token)await loadUserData();
+    let statusAvailable=true;
+    try{state.status=(await api('status'))||{};}catch(statusError){
+      // Keep price pages usable from their local cache when the API host is
+      // temporarily offline. Other pages still surface the connection error.
+      if(!['market','abc'].includes(pageAtStart))throw statusError;
+      statusAvailable=false;
+      // Preserve the public/owner surface while the status request is down;
+      // public deployments must not suddenly expose owner navigation offline.
+      state.status={stream:false,public_site:state.status.public_site===false?false:true};
+    }
+    renderStatus();
+    if(state.token&&statusAvailable){
+      try{await loadUserData();}
+      catch(userError){if(!['market','abc'].includes(pageAtStart))throw userError;}
+    }
     if((pageAtStart==='overview'||pageAtStart==='rules')&&!state.status.public_site){
       state.alerts=arrayOrEmpty(await api('alerts'));if($('#recent-alerts'))$('#recent-alerts').innerHTML=alertTable(state.alerts.slice(0,5));
       if(pageAtStart==='rules'){state.rules=arrayOrEmpty(await api('rules'));if(state.page===pageAtStart)renderRules();}
     }
     if(pageAtStart==='overview'){state.auctions=arrayOrEmpty(await api('auctions'));state.loadedAt.auctions=Date.now();if(state.page===pageAtStart)renderOverviewHighlights();}
     if(pageAtStart==='market'||pageAtStart==='abc'||pageAtStart==='merchant'){
-      const [market,abcPrices]=await Promise.all([api('market'),api('abc-prices').catch(()=>[])]);
-      state.market=arrayOrEmpty(market);state.abcPrices=arrayOrEmpty(abcPrices);state.loadedAt.market=Date.now();
+      const [marketResult,abcResult]=await Promise.allSettled([api('market'),api('abc-prices')]);
+      const marketCache=readPriceCache('market'),abcCache=readPriceCache('abc');
+      const marketOk=marketResult.status==='fulfilled'&&Array.isArray(marketResult.value);
+      const abcOk=abcResult.status==='fulfilled'&&Array.isArray(abcResult.value);
+      if(marketOk){state.market=marketResult.value;state.cacheMeta.market=0;writePriceCache('market',state.market);state.loadedAt.market=Date.now();}
+      else if(marketCache){state.market=marketCache.data;state.cacheMeta.market=marketCache.savedAt;state.loadedAt.market=marketCache.savedAt;}
+      else state.market=[];
+      if(abcOk){state.abcPrices=abcResult.value;state.cacheMeta.abc=0;writePriceCache('abc',state.abcPrices);state.loadedAt.abc=Date.now();}
+      else if(abcCache){state.abcPrices=abcCache.data;state.cacheMeta.abc=abcCache.savedAt;state.loadedAt.abc=abcCache.savedAt;}
+      else state.abcPrices=[];
       if(state.page===pageAtStart&&pageAtStart==='market'){
-        renderMarket();
+        renderMarket();renderCacheNotice('market');
       }else if(state.page===pageAtStart&&pageAtStart==='abc'){
-        renderAbc();
+        renderAbc();renderCacheNotice('abc');
       }else if(pageAtStart==='merchant'){state.rates=arrayOrEmpty(await api('rates'));if(state.page===pageAtStart)renderRates();}
+      if(!marketOk&&!abcOk&&(marketCache||abcCache))toast('Keine Verbindung. Zuletzt gespeicherte Markt- und ABC-Preise werden angezeigt.');
+      if(!marketOk&&!marketCache&&marketResult.status==='rejected')throw marketResult.reason;
+      if(!abcOk&&!abcCache&&abcResult.status==='rejected'&&pageAtStart==='abc')throw abcResult.reason;
     }
     if(pageAtStart==='auctions'){
       const [auctions,categories]=await Promise.all([api('auctions'),api('auction-categories')]);
@@ -576,11 +617,11 @@ async function load() {
     if(pageAtStart==='catalog'){const [catalog,categories]=await Promise.all([api('catalog'),api('auction-categories')]);state.catalog=arrayOrEmpty(catalog);state.categories=arrayOrEmpty(categories);state.loadedAt.catalog=Date.now();if(state.page===pageAtStart)renderCatalog();}
     if(pageAtStart==='values'){const [values,categories]=await Promise.all([api('values'),api('auction-categories')]);state.values=arrayOrEmpty(values);state.categories=arrayOrEmpty(categories);state.loadedAt.values=Date.now();if(state.page===pageAtStart)renderValues();}
   }catch (error) {
-    const protectedPages = new Set(['market','abc','catalog','values','merchant']);
+    const protectedPages = new Set(['catalog','values']);
     if (error?.status === 401 && protectedPages.has(pageAtStart)) {
       const host = document.querySelector(`#${pageAtStart}`);
       if (host) host.querySelectorAll('[data-price-content]').forEach(node => node.remove());
-      if (host && !host.querySelector('.price-login-gate')) host.insertAdjacentHTML('afterbegin', `<article class="card price-login-gate"><div class="eyebrow">GESCHÜTZTE PREISDATEN</div><h2>Bitte einloggen, um Itempreise zu sehen</h2><p>Markt-, Händler- und Itemwerte sind nur für registrierte Nutzer sichtbar. Die angezeigten Werte sind aus beobachteten Verkäufen berechnete Schätzungen und keine garantierten Verkaufspreise. Einzelne Ausreißer, Mengen und mehrere Preisstufen können das Ergebnis verändern.</p><button class="primary" type="button" data-goto="auth">Einloggen oder kostenlos registrieren ↗</button></article>`);
+      if (host && !host.querySelector('.price-login-gate')) host.insertAdjacentHTML('afterbegin', `<article class="card price-login-gate"><div class="eyebrow">GESCHÜTZTE ITEMWERTE</div><h2>Bitte einloggen, um geschätzte Itemwerte zu sehen</h2><p>Marktpreise, ABC-Referenzkurse und feste OPSHARD-Händlerkurse bleiben öffentlich. Diese Itemwerte stammen aus beobachteten Auktionsverkäufen und sind Schätzungen, keine garantierten Verkaufspreise. Einzelne Ausreißer, Mengen und mehrere Preisstufen können das Ergebnis verändern.</p><button class="primary" type="button" data-goto="auth">Einloggen oder kostenlos registrieren ↗</button></article>`);
       host.querySelector('[data-goto="auth"]')?.addEventListener('click', event => page(event.currentTarget.dataset.goto));
       return;
     }

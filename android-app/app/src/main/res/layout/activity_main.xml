@@ -11,13 +11,19 @@
     <LinearLayout android:id="@+id/loading_view" android:layout_width="match_parent" android:layout_height="match_parent"
         android:layout_gravity="center" android:gravity="center" android:orientation="vertical"
         android:background="@color/radar_background">
+        <ImageView android:layout_width="96dp" android:layout_height="96dp" android:src="@drawable/opsucht_favicon"
+            android:contentDescription="OPSUCHT Market" android:scaleType="fitCenter" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp"
+            android:text="OPSUCHT" android:textColor="#EDF4F7" android:textSize="26sp" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp"
+            android:text="MARKET · LIVE-DATEN" android:textColor="#71E5B7" android:letterSpacing="0.16" android:textSize="11sp" />
         <ProgressBar android:layout_width="42dp" android:layout_height="42dp" android:indeterminateTint="@color/radar_accent" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp"
             android:text="OPSUCHT Market wird geladen …" android:textColor="#B7C7D4" android:textSize="15sp" />
     </LinearLayout>
     <TextView android:id="@+id/offline_view" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_gravity="bottom" android:gravity="center" android:padding="16dp"
-        android:text="Offline – gespeicherte Daten werden angezeigt. Tippen zum Aktualisieren."
-        android:textColor="#EDF4F7" android:textSize="14sp" android:background="#E60A1014"
+        android:layout_gravity="center" android:gravity="center" android:padding="32dp"
+        android:text="OPSUCHT Market\n\nKeine Verbindung zur Website.\nTippen zum erneuten Laden."
+        android:textColor="#EDF4F7" android:textSize="16sp" android:lineSpacingExtra="5dp" android:background="@color/radar_background"
         android:visibility="gone" />
 </FrameLayout>

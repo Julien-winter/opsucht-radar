@@ -2,11 +2,16 @@ package net.opsucht.radar;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DownloadManager;
 import android.content.Intent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
+import android.os.Environment;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -21,8 +26,10 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.TextView;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -47,6 +54,8 @@ public final class MainActivity extends Activity {
     private boolean updateCheckStarted;
     private boolean offlineFallbackAttempted;
     private boolean loadFinished;
+    private long pendingDownloadId = -1L;
+    private BroadcastReceiver updateReceiver;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Runnable loadTimeout = () -> {
         if (!loadFinished && webView != null) {
@@ -154,7 +163,23 @@ public final class MainActivity extends Activity {
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> refreshLayout.setEnabled(scrollY <= 0));
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> openExternalIfNeeded(Uri.parse(url)));
         webView.loadUrl(BuildConfig.RADAR_URL);
+        registerUpdateReceiver();
         checkForUpdate();
+    }
+
+    private void registerUpdateReceiver() {
+        updateReceiver = new BroadcastReceiver() {
+            @Override public void onReceive(Context context, Intent intent) {
+                if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
+                if (id != pendingDownloadId) return;
+                pendingDownloadId = -1L;
+                Toast.makeText(MainActivity.this, "APK-Download abgeschlossen. Öffne die Benachrichtigung zum Installieren.", Toast.LENGTH_LONG).show();
+            }
+        };
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(updateReceiver, filter);
     }
 
     private boolean openExternalIfNeeded(Uri uri) {
@@ -171,10 +196,11 @@ public final class MainActivity extends Activity {
         loadFinished = false;
         mainHandler.removeCallbacks(loadTimeout);
         loadingView.setVisibility(View.GONE);
+        webView.setVisibility(View.GONE);
         refreshLayout.setRefreshing(false);
         offlineView.setVisibility(View.VISIBLE);
         offlineView.setOnClickListener(v -> retryLoad());
-        offlineView.setText("OPSUCHT Market konnte nicht geladen werden.\nTippen zum erneuten Versuch");
+        offlineView.setText("OPSUCHT Market\n\nKeine Verbindung zur Website.\nTippen zum erneuten Laden.");
     }
 
     private void retryLoad() {
@@ -183,6 +209,9 @@ public final class MainActivity extends Activity {
         loadFinished = false;
         mainHandler.removeCallbacks(contentCheck);
         mainHandler.removeCallbacks(loadTimeout);
+        webView.setVisibility(View.VISIBLE);
+        offlineView.setVisibility(View.GONE);
+        loadingView.setVisibility(View.VISIBLE);
         webView.getSettings().setCacheMode(isNetworkAvailable() ? WebSettings.LOAD_DEFAULT : WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.loadUrl(BuildConfig.RADAR_URL);
     }
@@ -201,7 +230,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() { super.onResume(); if (refreshLayout != null) refreshLayout.setRefreshing(false); if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad(); }
     @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
     @Override protected void onStop() { if (webView != null) webView.onPause(); super.onStop(); }
-    @Override protected void onDestroy() { mainHandler.removeCallbacks(contentCheck); mainHandler.removeCallbacks(loadTimeout); updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
+    @Override protected void onDestroy() { mainHandler.removeCallbacks(contentCheck); mainHandler.removeCallbacks(loadTimeout); if (updateReceiver != null) { try { unregisterReceiver(updateReceiver); } catch (Exception ignored) {} } updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
 
     /** Checks release metadata only; installation stays with the user. */
     private void checkForUpdate() {
@@ -220,16 +249,59 @@ public final class MainActivity extends Activity {
                 }
                 JSONObject release = new JSONObject(body.toString());
                 String latest = release.optString("tag_name", release.optString("name", ""));
-                String download = release.optString("html_url", "");
+                String download = findApkAsset(release.optJSONArray("assets"));
+                String notes = release.optString("body", "").trim();
                 if (latest.isEmpty() || download.isEmpty() || !isNewer(latest, BuildConfig.VERSION_NAME)) return;
+                final String changelog = notes.isEmpty() ? "Keine zusätzlichen Änderungen veröffentlicht." : notes.substring(0, Math.min(3500, notes.length()));
                 runOnUiThread(() -> new AlertDialog.Builder(this)
-                    .setTitle("Neue OPSUCHT-Market-Version")
-                    .setMessage("Version " + latest + " ist verfügbar. Jetzt die GitHub-Release-Seite öffnen?")
+                    .setTitle("Neue OPSUCHT-Market-Version · " + latest)
+                    .setMessage("Änderungen:\n\n" + changelog + "\n\nDie APK wird direkt in der App heruntergeladen. Es wird nichts ohne deine Bestätigung installiert.")
                     .setNegativeButton("Später", null)
-                    .setPositiveButton("Öffnen", (dialog, which) -> openExternalIfNeeded(Uri.parse(download)))
+                    .setPositiveButton("APK herunterladen", (dialog, which) -> downloadUpdate(download, latest))
                     .show());
             } catch (Exception ignored) { }
         });
+    }
+
+    /** Select only a real APK asset from the trusted GitHub release response. */
+    private static String findApkAsset(JSONArray assets) {
+        if (assets == null) return "";
+        for (int i = 0; i < assets.length(); i++) {
+            JSONObject asset = assets.optJSONObject(i);
+            if (asset == null) continue;
+            String name = asset.optString("name", "").toLowerCase();
+            String url = asset.optString("browser_download_url", "");
+            if (name.endsWith(".apk") && isTrustedDownloadUrl(url)) return url;
+        }
+        return "";
+    }
+
+    private static boolean isTrustedDownloadUrl(String value) {
+        try {
+            Uri uri = Uri.parse(value);
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+            return "https".equalsIgnoreCase(uri.getScheme()) &&
+                ("github.com".equals(host) || "objects.githubusercontent.com".equals(host) || "githubusercontent.com".equals(host));
+        } catch (Exception ignored) { return false; }
+    }
+
+    private void downloadUpdate(String url, String version) {
+        if (!isTrustedDownloadUrl(url)) { Toast.makeText(this, "Unsichere Update-Adresse abgelehnt.", Toast.LENGTH_LONG).show(); return; }
+        try {
+            String safeVersion = version.replaceAll("[^A-Za-z0-9._-]", "_");
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setTitle("OPSUCHT Market " + version);
+            request.setDescription("APK wird heruntergeladen …");
+            request.setMimeType("application/vnd.android.package-archive");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setAllowedOverMetered(true);
+            request.setAllowedOverRoaming(false);
+            request.setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "OPSUCHT-Market-" + safeVersion + ".apk");
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            if (manager == null) throw new IllegalStateException("Download-Dienst nicht verfügbar");
+            pendingDownloadId = manager.enqueue(request);
+            Toast.makeText(this, "Download gestartet. Die Android-Benachrichtigung öffnet die APK danach.", Toast.LENGTH_LONG).show();
+        } catch (Exception error) { Toast.makeText(this, "Download konnte nicht gestartet werden.", Toast.LENGTH_LONG).show(); }
     }
 
     private static boolean isNewer(String remote, String current) {

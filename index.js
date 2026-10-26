@@ -941,7 +941,10 @@ async function processNotifications(){
 
 function publicStatus(){
   const count=table=>store.db.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n;
-  const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots"),maintenance:store.get("maintenance",{enabled:false,message:""})};
+  const sponsorUrl=String(env("SPONSOR_URL","")).trim();
+  const sponsorEnabled=truthy(env("SPONSOR_ENABLED"))&&/^https?:\/\//i.test(sponsorUrl);
+  const sponsor=sponsorEnabled?{enabled:true,title:String(env("SPONSOR_TITLE","Community-Sponsor")).slice(0,80),text:String(env("SPONSOR_TEXT","Unterstützt OPSUCHT Market")).slice(0,240),url:sponsorUrl.slice(0,500)}:{enabled:false};
+  const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots"),maintenance:store.get("maintenance",{enabled:false,message:""}),sponsor};
   if(publicMode()){delete data.watched_player;delete data.bot_connected;}
   else Object.assign(data,{webhook_configured:Boolean(env("DISCORD_WEBHOOK_URL")),bot_configured:Boolean(env("DISCORD_BOT_TOKEN")),bot_connected:Boolean(status.bot_connected),ping_target:env("PING_TARGET","everyone")});
   return data;
@@ -1200,7 +1203,9 @@ function jsonResponse(response, value, statusCode=200, headers={}){
 }
 function securityHeaders(response, request){
   response.setHeader("X-Content-Type-Options","nosniff");response.setHeader("X-Frame-Options","DENY");response.setHeader("Referrer-Policy","strict-origin-when-cross-origin");response.setHeader("Permissions-Policy","camera=(), microphone=(), geolocation=()");
-  response.setHeader("Content-Security-Policy","default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self'");
+  // HTTP is still the supported deployment mode; allow only image hosts that
+  // the frontend allow-list accepts so custom item icons render there too.
+  response.setHeader("Content-Security-Policy","default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: http://img.mc-api.io http://items.opsucht.net http://mc-api.io https://img.mc-api.io https://items.opsucht.net https://mc-api.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self'");
   response.setHeader("Cross-Origin-Resource-Policy", "same-origin");
   response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   if(publicMode()&&(request.socket.encrypted||request.headers["x-forwarded-proto"]==="https"))response.setHeader("Strict-Transport-Security","max-age=31536000; includeSubDomains");
@@ -1216,10 +1221,10 @@ function authenticate(request,response){
     jsonResponse(response,{error:"Anmeldung erforderlich"},401);
     return false;
   }
-  // Live auction listings stay public, while derived price intelligence and
-  // item valuation data require a signed-in account. Owner administration is
-  // kept separate and always requires ADMIN_TOKEN.
-  const priceDataRoute=["/api/market","/api/abc-prices","/api/catalog","/api/values","/api/rates"].includes(pathname)||pathname.startsWith("/api/history/")||pathname.startsWith("/api/sales/");
+  // Live auction listings, published market orders, ABC reference prices and
+  // fixed OPSHARD/merchant rates stay public. Only prices derived from auction
+  // sales (and their detailed histories/catalog views) require an account.
+  const priceDataRoute=["/api/catalog","/api/values"].includes(pathname)||pathname.startsWith("/api/sales/");
   const accountRoute=pathname==="/api/me"||pathname.startsWith("/api/me/");
   const adminRoute=["/api/rules","/api/alerts","/api/settings","/api/maintenance","/api/webhook/test"].includes(pathname)||pathname.startsWith("/api/player-alerts");
   const privateRoute=priceDataRoute||accountRoute||adminRoute;
@@ -1232,7 +1237,7 @@ function authenticate(request,response){
   // Normal accounts may read protected price intelligence and their own data.
   if (user && (priceDataRoute || accountRoute)) return true;
   const token=env("ADMIN_TOKEN");
-  if (priceDataRoute && !token) { jsonResponse(response,{error:"Anmeldung erforderlich: Marktpreise und Itemwerte sind nur für registrierte Nutzer sichtbar."},401); return false; }
+  if (priceDataRoute && !token) { jsonResponse(response,{error:"Anmeldung erforderlich: geschätzte Itemwerte aus Auktionsverkäufen sind nur für registrierte Nutzer sichtbar."},401); return false; }
   if(!token){jsonResponse(response,{error:"Private Radar-Verwaltung ist auf diesem öffentlichen Deployment deaktiviert."},503);return false;}
   const got=request.headers.authorization||"";
   const expected=`Bearer ${token}`;
@@ -1418,7 +1423,9 @@ function apiData(request,pathname){
   if(pathname==="/api/me/alerts") { const user=userFromRequest(request); if(!user) throw Object.assign(new Error("Anmeldung erforderlich"),{status:401}); return store.rows("SELECT a.id,a.uid,a.price,a.created,a.sent,a.attempts,a.error,r.name rule,r.kind FROM user_alerts a JOIN user_rules r ON r.id=a.user_rule_id WHERE r.user_id=? ORDER BY a.created DESC LIMIT 100",user.id); }
   if(pathname==="/api/status"){
     const count=table=>store.db.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n;
-    const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots"),maintenance:store.get("maintenance",{enabled:false,message:""})};
+    const sponsorUrl=String(env("SPONSOR_URL","")).trim(),sponsorEnabled=truthy(env("SPONSOR_ENABLED"))&&/^https?:\/\//i.test(sponsorUrl);
+    const sponsor=sponsorEnabled?{enabled:true,title:String(env("SPONSOR_TITLE","Community-Sponsor")).slice(0,80),text:String(env("SPONSOR_TEXT","Unterstützt OPSUCHT Market")).slice(0,240),url:sponsorUrl.slice(0,500)}:{enabled:false};
+    const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots"),maintenance:store.get("maintenance",{enabled:false,message:""}),sponsor};
     if(publicMode()){delete data.watched_player;delete data.bot_connected;}else Object.assign(data,{webhook_configured:Boolean(env("DISCORD_WEBHOOK_URL")),bot_configured:Boolean(env("DISCORD_BOT_TOKEN")),bot_connected:Boolean(status.bot_connected),ping_target:env("PING_TARGET","everyone")});
     return data;
   }

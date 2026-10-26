@@ -27,8 +27,12 @@ gradlew.bat assembleDebug -PopsuchtUrl=http://dein-host:63816/
 ```
 
 Die App prüft beim Start standardmäßig die GitHub-Releases von
-`Julien-winter/opsucht-radar`. Sie liest nur Release-Metadaten und öffnet bei
-einer neueren Version die Release-Seite; sie installiert nichts automatisch.
+`Julien-winter/opsucht-radar`. Bei einer neueren Version zeigt sie den
+Release-Changelog direkt in der App und lädt nach deiner Bestätigung nur das
+geprüfte APK-Asset über Androids Download-Manager. Es wird nichts still
+installiert; nach dem Download öffnest du die APK über die Android-
+Benachrichtigung und bestätigst die Installation selbst. ZIP-Dateien oder
+beliebige externe Download-URLs werden nicht ausgewählt.
 Für Forks oder Test-Repositories kann die URL beim Build überschrieben werden:
 
 ```text

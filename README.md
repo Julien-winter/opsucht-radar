@@ -24,6 +24,8 @@ Für deine Zuweisung ist die öffentliche Adresse `http://45.93.249.214:63816`. 
 ## Website
 
 - Marktpreise mit Kategorie-Chips, 24-Stunden-Vergleich, Orderzahlen und Preisverlauf.
+- ABC-/sw-abc-Referenzpreise werden aus `Kn0cki/sw_abc_prices` synchronisiert und im Itemdetail getrennt von den aktuellen OPSUCHT-BUY/SELL-Orders angezeigt.
+- Marktpreise, ABC-Referenzkurse und feste OPSHARD-Händlerkurse sind öffentlich. Nur aus Auktionsverkäufen abgeleitete Itemwerte, Katalog-/Variantenpreise und Verkaufsdetails benötigen ein Konto und werden als Schätzungen gekennzeichnet.
 - Alle aktiven Auktionen, inklusive normaler Gebote ohne Sofortkauf, Bieter, Skins und Itemdetails.
 - Item-Katalog mit 444 Marktmaterialien plus Items/Varianten, die in aktiven oder archivierten öffentlichen Auktionen und bestätigten Verkäufen beobachtet wurden. **Die OPSUCHT-API veröffentlicht keine vollständige Shop-/Inventar-Itemdatenbank**, daher können nie öffentlich gelistete Items nicht vorab aufgelistet werden.
 - Filterkette Hauptkategorie → Unterkategorie → Typ, zum Beispiel Werkzeuge → Spitzhacken; Spezial-Verzauberungsfilter passen sich der aktuellen Auktionensuche an.
@@ -76,5 +78,18 @@ npm test
 
 Die lokale Testausführung verändert keine Produktionsdaten. Für einen manuellen Integrationscheck kann `DATA_DIR` auf einen neu angelegten temporären Ordner und `RADAR_DISABLE_COLLECTOR=true` gesetzt werden; danach den Ordner vollständig löschen. Der Test sollte Registrierung, Login, `/api/me` und den privaten Zugriff mit dem zurückgegebenen Bearer-Token prüfen. Produktions-`data/` niemals als Testziel verwenden.
 
+## Veröffentlichungen und Downloads
+
+Quellcode und Laufzeitdaten werden getrennt gehalten. APKs, Server-ZIPs, Datenbanken
+und lokale Build-Ausgaben gehören nicht in den Git-Verlauf. Ein Tag im Format
+`v1.2.3` startet `.github/workflows/release.yml`; der Workflow baut die Release-APK,
+legt eine SHA-256-Prüfsummendatei bei und veröffentlicht APK sowie ein bereinigtes
+Server-Quellarchiv als GitHub-Release-Assets. Die Android-App fragt nur die Release-
+Metadaten ab und lädt niemals beliebige Dateien aus dem Repository herunter.
+
 
 Discord-Community: https://discord.gg/RmwFCMdghA
+
+### Werbung und Sponsoring
+
+Es ist ein optionaler, nicht personalisierter Sponsorenplatz vorbereitet. Er bleibt standardmäßig deaktiviert (`SPONSOR_ENABLED=false`) und lädt keine AdSense-/AdMob-Skripte oder Tracker. Für einen Sponsor setzt du `SPONSOR_ENABLED=true`, `SPONSOR_TITLE`, `SPONSOR_TEXT` und eine eigene `SPONSOR_URL` in der Server-Umgebung. Der Link muss `http://` oder `https://` verwenden. Für echte Werbenetzwerke brauchst du zusätzlich deren Publisher-/App-ID, eine Einwilligungslösung, eine Datenschutzerklärung und im App-Store praktisch HTTPS; das wird bewusst nicht automatisch aktiviert.
