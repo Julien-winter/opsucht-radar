@@ -624,7 +624,10 @@ async function load() {
       state.status={stream:false,public_site:state.status.public_site===false?false:true};
     }
     renderStatus();
-    if(state.token&&statusAvailable){
+    // The owner shell uses ADMIN_TOKEN rather than a normal account session.
+    // Never send that token to /api/me, which would clear it after the normal
+    // account endpoints correctly reject it.
+    if(state.token&&statusAvailable&&!ownerPanel){
       try{await loadUserData();}
       catch(userError){if(!['market','abc'].includes(pageAtStart))throw userError;}
     }
