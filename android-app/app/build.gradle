@@ -25,6 +25,10 @@ android {
         release {
             minifyEnabled false
             shrinkResources false
+            // Existing public APKs were signed with the standard Android
+            // debug key. Keep that signing identity for update compatibility
+            // until a permanent release keystore is configured in CI.
+            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
