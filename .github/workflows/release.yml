@@ -76,15 +76,38 @@ jobs:
             echo "Ungültiger Release-Tag: ${release_tag}" >&2
             exit 1
           fi
+          # Do not silently publish an APK whose internal version differs from
+          # the tag. This is especially useful when a release is rebuilt from
+          # an older source ref.
+          version_name="$(sed -n "s/^[[:space:]]*versionName[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" android-app/app/build.gradle | head -n 1)"
+          expected_version="${release_tag#v}"
+          [[ "$version_name" == "$expected_version" ]] || {
+            echo "Version stimmt nicht mit dem Tag überein: build=$version_name tag=$expected_version" >&2
+            exit 1
+          }
           cp android-app/app/build/outputs/apk/release/app-release.apk "release-assets/OPSUCHT-Market-${release_tag}.apk"
           sha256sum release-assets/*.apk > release-assets/SHA256SUMS.txt
+          # Keep release pages readable: publish only the matching changelog
+          # section instead of repeating the complete history every time.
+          awk -v wanted="## ${release_tag#v}" '
+            $0 == wanted { found=1; print; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-assets/RELEASE_NOTES.md
+          if [[ ! -s release-assets/RELEASE_NOTES.md ]]; then
+            echo "Kein Changelog-Abschnitt für ${release_tag} gefunden" >&2
+            exit 1
+          fi
+          # Prevent accidental source archives, databases or signing material
+          # from becoming release assets.
+          find release-assets -type f ! -name '*.apk' ! -name 'SHA256SUMS.txt' ! -name 'RELEASE_NOTES.md' -delete
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
           name: OPSUCHT Market ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          body_path: CHANGELOG.md
+          body_path: release-assets/RELEASE_NOTES.md
           files: |
             release-assets/*.apk
             release-assets/SHA256SUMS.txt
