@@ -1213,7 +1213,11 @@ function authenticate(request,response){
     jsonResponse(response,{error:"Anmeldung erforderlich"},401);
     return false;
   }
-  const privateRoute=["/api/rules","/api/alerts","/api/settings","/api/webhook/test","/api/me/rules","/api/me/alerts","/api/me/webhook","/api/me/webhook/test","/api/me/minecraft","/api/me/minecraft/challenge","/api/me/minecraft/verify"].includes(pathname)||pathname.startsWith("/api/player-alerts");
+  // Live auction listings stay public, while derived price intelligence and
+  // item valuation data require a signed-in account. This keeps the public
+  // auction house useful without exposing the historical price database.
+  const priceDataRoute=["/api/market","/api/abc-prices","/api/catalog","/api/values","/api/rates"].includes(pathname)||pathname.startsWith("/api/history/")||pathname.startsWith("/api/sales/");
+  const privateRoute=["/api/rules","/api/alerts","/api/settings","/api/webhook/test","/api/me/rules","/api/me/alerts","/api/me/webhook","/api/me/webhook/test","/api/me/minecraft","/api/me/minecraft/challenge","/api/me/minecraft/verify"].includes(pathname)||pathname.startsWith("/api/player-alerts")||priceDataRoute;
   const authRoute=pathname.startsWith("/api/auth/");
   // HEAD has the same read-only semantics as GET. Treating it as a write
   // made public health checks and cache validators unexpectedly return 503
@@ -1223,8 +1227,11 @@ function authenticate(request,response){
   const required=!authRoute&&(publicMode()&&(!readOnly||privateRoute)||Boolean(env("ADMIN_TOKEN"))&&(!readOnly||privateRoute));
   if(!required)return true;
   const user = userFromRequest(request);
-  if (user && (pathname === "/api/me" || pathname.startsWith("/api/me/"))) return true;
+  // Account sessions may access their own protected price data and rules.
+  // The admin token remains a separate fallback for owner-only endpoints.
+  if (user && (privateRoute || pathname === "/api/me" || pathname.startsWith("/api/me/"))) return true;
   const token=env("ADMIN_TOKEN");
+  if (priceDataRoute && !token) { jsonResponse(response,{error:"Anmeldung erforderlich: Marktpreise und Itemwerte sind nur für registrierte Nutzer sichtbar."},401); return false; }
   if(!token){jsonResponse(response,{error:"Private Radar-Verwaltung ist auf diesem öffentlichen Deployment deaktiviert."},503);return false;}
   const got=request.headers.authorization||"";
   const expected=`Bearer ${token}`;
@@ -1430,7 +1437,8 @@ function apiData(request,pathname){
   if(pathname==="/api/auction-categories")return store.get("auction_categories",[]);
   if(pathname==="/api/auctions"){
     const uid=q.get("uid")||"", limit=Math.min(500,Math.max(1,Number(q.get("limit"))||500)), offset=Math.min(5000,Math.max(0,Number(q.get("offset"))||0));
-    let auctions=store.auctionList((q.get("q")||"").slice(0,200),q.get("instant")==="1",{uid,limit,offset}).map(auction=>{if(auction?.item?.icon)auction.item.icon=normalizePublicItemIcon(auction.item.icon,auction.item.material);return auction;}),category=q.get("category");
+    const hasPriceAccess=Boolean(userFromRequest(request,false));
+    let auctions=store.auctionList((q.get("q")||"").slice(0,200),q.get("instant")==="1",{uid,limit,offset}).map(auction=>{if(auction?.item?.icon)auction.item.icon=normalizePublicItemIcon(auction.item.icon,auction.item.material);if(!hasPriceAccess&&auction&&typeof auction==='object')delete auction.value;return auction;}),category=q.get("category");
     if(category)auctions=auctions.filter(x=>x.category===category);return auctions;
   }
   if(pathname==="/api/catalog")return getCatalog();

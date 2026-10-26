@@ -154,6 +154,12 @@ const pages = {
   merchant:['Mehr Währung fürs Geld.','Umtauschkurse vergleichen und deine Rohstoffkosten kalkulieren.','Händler-Rechner']
 };
 function page(name, options={}) {
+  const loginOnlyPages = new Set(['market','abc','catalog','values','merchant']);
+  if (loginOnlyPages.has(name) && !state.token) {
+    toast('Für Marktpreise, Itemwerte und Händlerdaten bitte zuerst anmelden.', true);
+    name = 'auth';
+    options = { ...options, load: false };
+  }
   state.page=name;
   if (telemetryConsent()) { telemetryUsage.pageViews++; queueTelemetry('page_view',{page:String(name).slice(0,32)}); }
   document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==name);
