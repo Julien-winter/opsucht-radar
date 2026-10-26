@@ -125,6 +125,7 @@ public final class MainActivity extends Activity {
                 loadFinished = false;
                 loadingView.setVisibility(View.VISIBLE);
                 offlineView.setVisibility(View.GONE);
+                mainHandler.removeCallbacks(contentCheck);
                 mainHandler.removeCallbacks(loadTimeout);
                 mainHandler.postDelayed(loadTimeout, 12000);
             }
@@ -180,6 +181,8 @@ public final class MainActivity extends Activity {
         if (webView == null) return;
         offlineFallbackAttempted = false;
         loadFinished = false;
+        mainHandler.removeCallbacks(contentCheck);
+        mainHandler.removeCallbacks(loadTimeout);
         webView.getSettings().setCacheMode(isNetworkAvailable() ? WebSettings.LOAD_DEFAULT : WebSettings.LOAD_CACHE_ELSE_NETWORK);
         webView.loadUrl(BuildConfig.RADAR_URL);
     }
@@ -198,7 +201,7 @@ public final class MainActivity extends Activity {
     @Override protected void onResume() { super.onResume(); if (refreshLayout != null) refreshLayout.setRefreshing(false); if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad(); }
     @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
     @Override protected void onStop() { if (webView != null) webView.onPause(); super.onStop(); }
-    @Override protected void onDestroy() { mainHandler.removeCallbacks(loadTimeout); updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
+    @Override protected void onDestroy() { mainHandler.removeCallbacks(contentCheck); mainHandler.removeCallbacks(loadTimeout); updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
 
     /** Checks release metadata only; installation stays with the user. */
     private void checkForUpdate() {
