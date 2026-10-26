@@ -397,8 +397,8 @@ class Store {
       CREATE TABLE IF NOT EXISTS player_leads(watch_name TEXT,uid TEXT,target_bid REAL,leader INTEGER,top_bidder TEXT,top_bid REAL,updated REAL,PRIMARY KEY(watch_name,uid));
       CREATE TABLE IF NOT EXISTS player_alerts(id INTEGER PRIMARY KEY AUTOINCREMENT,watch_name TEXT,uid TEXT,target_bid REAL,overbid REAL,created REAL,sent REAL,attempts INTEGER DEFAULT 0,next_try REAL DEFAULT 0,error TEXT,payload TEXT,UNIQUE(watch_name,uid,target_bid));
       CREATE TABLE IF NOT EXISTS player_profiles(uuid TEXT PRIMARY KEY,name TEXT,skin_url TEXT,checked REAL NOT NULL);
-      CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,email TEXT,email_verified INTEGER NOT NULL DEFAULT 0,minecraft_uuid TEXT,minecraft_username TEXT,minecraft_verified INTEGER NOT NULL DEFAULT 0,minecraft_verified_at REAL,webhook TEXT,mention TEXT DEFAULT 'none',webhook_expires REAL,created REAL NOT NULL,last_login REAL);
-      CREATE TABLE IF NOT EXISTS minecraft_link_challenges(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL,minecraft_uuid TEXT NOT NULL,minecraft_username TEXT NOT NULL,code_hash TEXT NOT NULL,created REAL NOT NULL,expires REAL NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,used INTEGER NOT NULL DEFAULT 0,verified_at REAL,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);
+      CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,email TEXT,email_verified INTEGER NOT NULL DEFAULT 0,minecraft_uuid TEXT,minecraft_username TEXT,minecraft_edition TEXT, minecraft_verified INTEGER NOT NULL DEFAULT 0,minecraft_verified_at REAL,webhook TEXT,mention TEXT DEFAULT 'none',webhook_expires REAL,created REAL NOT NULL,last_login REAL);
+      CREATE TABLE IF NOT EXISTS minecraft_link_challenges(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL,minecraft_uuid TEXT NOT NULL,minecraft_username TEXT NOT NULL,minecraft_edition TEXT NOT NULL DEFAULT 'java',code_hash TEXT NOT NULL,created REAL NOT NULL,expires REAL NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,used INTEGER NOT NULL DEFAULT 0,verified_at REAL,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);
       CREATE INDEX IF NOT EXISTS minecraft_challenges_user ON minecraft_link_challenges(user_id,used,expires);
       CREATE INDEX IF NOT EXISTS minecraft_challenges_uuid ON minecraft_link_challenges(minecraft_uuid,used,expires);
       CREATE TABLE IF NOT EXISTS user_sessions(token_hash TEXT PRIMARY KEY,user_id INTEGER NOT NULL,created REAL NOT NULL,expires REAL NOT NULL,last_seen REAL NOT NULL,FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);
@@ -417,8 +417,11 @@ class Store {
     if (!userColumns.has("email_verified")) this.db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
     if (!userColumns.has("minecraft_uuid")) this.db.exec("ALTER TABLE users ADD COLUMN minecraft_uuid TEXT");
     if (!userColumns.has("minecraft_username")) this.db.exec("ALTER TABLE users ADD COLUMN minecraft_username TEXT");
+    if (!userColumns.has("minecraft_edition")) this.db.exec("ALTER TABLE users ADD COLUMN minecraft_edition TEXT");
     if (!userColumns.has("minecraft_verified")) this.db.exec("ALTER TABLE users ADD COLUMN minecraft_verified INTEGER NOT NULL DEFAULT 0");
     if (!userColumns.has("minecraft_verified_at")) this.db.exec("ALTER TABLE users ADD COLUMN minecraft_verified_at REAL");
+    const challengeColumns = new Set(this.db.prepare("PRAGMA table_info(minecraft_link_challenges)").all().map(x => x.name));
+    if (!challengeColumns.has("minecraft_edition")) this.db.exec("ALTER TABLE minecraft_link_challenges ADD COLUMN minecraft_edition TEXT NOT NULL DEFAULT 'java'");
     this.db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users(email) WHERE email IS NOT NULL AND email<>''");
     // Give legacy webhook records the same seven-day lifetime as newly saved
     // webhooks instead of silently leaving old credentials permanent.
@@ -645,7 +648,7 @@ function minecraftServiceAuthorized(request) {
   const header = String(request.headers.authorization || "");
   return Boolean(secret) && /^Bearer\s+\S+$/i.test(header) && safeTokenEquals(header.replace(/^Bearer\s+/i, "").trim(), secret);
 }
-function createMinecraftChallenge(userId, profile) {
+function createMinecraftChallenge(userId, profile, edition = "java") {
   const now = Date.now() / 1000;
   // A short, human-readable code is meant to be entered in-game. Store only
   // its hash so a database read cannot be used to complete a link.
@@ -653,14 +656,14 @@ function createMinecraftChallenge(userId, profile) {
   const id = crypto.randomUUID();
   const expires = now + 10 * 60;
   store.db.prepare("UPDATE minecraft_link_challenges SET used=1 WHERE user_id=? AND used=0").run(userId);
-  store.db.prepare("INSERT INTO minecraft_link_challenges(id,user_id,minecraft_uuid,minecraft_username,code_hash,created,expires) VALUES(?,?,?,?,?,?,?)")
-    .run(id, userId, profile.uuid, profile.username, hashSecret(code), now, expires);
-  return { id, code, username: profile.username, uuid: profile.uuid, expires, expires_in: 600, command: `/link ${code}` };
+  store.db.prepare("INSERT INTO minecraft_link_challenges(id,user_id,minecraft_uuid,minecraft_username,minecraft_edition,code_hash,created,expires) VALUES(?,?,?,?,?,?,?,?)")
+    .run(id, userId, profile.uuid, profile.username, edition, hashSecret(code), now, expires);
+  return { id, code, username: profile.username, uuid: profile.uuid, edition, expires, expires_in: 600, command: `/link ${code}` };
 }
 function activeMinecraftChallenge(userId) {
   const now = Date.now() / 1000;
-  const row = store.db.prepare("SELECT id,minecraft_uuid,minecraft_username,created,expires FROM minecraft_link_challenges WHERE user_id=? AND used=0 AND expires>? ORDER BY created DESC LIMIT 1").get(userId, now);
-  return row ? { id: row.id, username: row.minecraft_username, uuid: row.minecraft_uuid, created: row.created, expires: row.expires, expires_in: Math.max(0, Math.ceil(row.expires - now)) } : null;
+  const row = store.db.prepare("SELECT id,minecraft_uuid,minecraft_username,minecraft_edition,created,expires FROM minecraft_link_challenges WHERE user_id=? AND used=0 AND expires>? ORDER BY created DESC LIMIT 1").get(userId, now);
+  return row ? { id: row.id, username: row.minecraft_username, uuid: row.minecraft_uuid, edition: row.minecraft_edition || "java", created: row.created, expires: row.expires, expires_in: Math.max(0, Math.ceil(row.expires - now)) } : null;
 }
 function valuation(variant) { return store.valuation(variant); }
 function saveMeta(name, value) { store.set(name, value); }
@@ -938,7 +941,7 @@ async function processNotifications(){
 
 function publicStatus(){
   const count=table=>store.db.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n;
-  const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots")};
+  const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots"),maintenance:store.get("maintenance",{enabled:false,message:""})};
   if(publicMode()){delete data.watched_player;delete data.bot_connected;}
   else Object.assign(data,{webhook_configured:Boolean(env("DISCORD_WEBHOOK_URL")),bot_configured:Boolean(env("DISCORD_BOT_TOKEN")),bot_connected:Boolean(status.bot_connected),ping_target:env("PING_TARGET","everyone")});
   return data;
@@ -1244,13 +1247,13 @@ function userFromRequest(request, touch = true) {
   if (!/^Bearer\s+\S+$/i.test(header)) return null;
   const tokenHash = hashSecret(header.replace(/^Bearer\s+/i, "").trim());
   const now = Date.now() / 1000;
-  const session = store.db.prepare("SELECT s.*,u.username,u.email,u.email_verified,u.created,u.last_login,u.minecraft_uuid,u.minecraft_username,u.minecraft_verified,u.minecraft_verified_at,u.webhook,u.mention,u.webhook_expires FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires>? LIMIT 1").get(tokenHash, now);
+  const session = store.db.prepare("SELECT s.*,u.username,u.email,u.email_verified,u.created,u.last_login,u.minecraft_uuid,u.minecraft_username,u.minecraft_edition,u.minecraft_verified,u.minecraft_verified_at,u.webhook,u.mention,u.webhook_expires FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires>? LIMIT 1").get(tokenHash, now);
   if (!session) return null;
   // Avoid a SQLite write on every public API request while still extending
   // active sessions regularly.
   if (touch && now - Number(session.last_seen || 0) >= 60) store.db.prepare("UPDATE user_sessions SET last_seen=? WHERE token_hash=?").run(now, tokenHash);
   const webhook=session.webhook_expires&&session.webhook_expires<=now?null:session.webhook;
-  return { id: session.user_id, username: session.username, email: session.email || null, email_verified: Boolean(session.email_verified), created: session.created || null, last_login: session.last_login || null, minecraft_uuid: session.minecraft_uuid || null, minecraft_username: session.minecraft_username || null, minecraft_verified: Boolean(session.minecraft_verified), minecraft_verified_at: session.minecraft_verified_at || null, webhook, webhook_expires: session.webhook_expires||null, mention: session.mention || "none", tokenHash };
+  return { id: session.user_id, username: session.username, email: session.email || null, email_verified: Boolean(session.email_verified), created: session.created || null, last_login: session.last_login || null, minecraft_uuid: session.minecraft_uuid || null, minecraft_username: session.minecraft_username || null, minecraft_edition: session.minecraft_edition || null, minecraft_verified: Boolean(session.minecraft_verified), minecraft_verified_at: session.minecraft_verified_at || null, webhook, webhook_expires: session.webhook_expires||null, mention: session.mention || "none", tokenHash };
 }
 function issueSession(userId) {
   const token = crypto.randomBytes(32).toString("base64url"), now = Date.now() / 1000;
@@ -1261,7 +1264,7 @@ function issueSession(userId) {
 function userPublic(user) {
   if (!user) return null;
   const pending = !user.minecraft_verified && user.id ? activeMinecraftChallenge(user.id) : null;
-  return { id: user.id, username: user.username, email: user.email || null, email_verified: Boolean(user.email_verified), created: user.created || null, last_login: user.last_login || null, minecraft_uuid: user.minecraft_uuid || null, minecraft_username: user.minecraft_username || null, minecraft_verified: Boolean(user.minecraft_verified), minecraft_verified_at: user.minecraft_verified_at || null, minecraft_pending: pending ? { id: pending.id, username: pending.username, uuid: pending.uuid, expires: pending.expires, expires_in: pending.expires_in } : null, webhook_configured: Boolean(user.webhook), webhook_expires: user.webhook_expires || null, mention: user.mention || "none" };
+  return { id: user.id, username: user.username, email: user.email || null, email_verified: Boolean(user.email_verified), created: user.created || null, last_login: user.last_login || null, minecraft_uuid: user.minecraft_uuid || null, minecraft_username: user.minecraft_username || null, minecraft_edition: user.minecraft_edition || null, minecraft_verified: Boolean(user.minecraft_verified), minecraft_verified_at: user.minecraft_verified_at || null, minecraft_pending: pending ? { id: pending.id, username: pending.username, uuid: pending.uuid, edition: pending.edition || "java", expires: pending.expires, expires_in: pending.expires_in } : null, webhook_configured: Boolean(user.webhook), webhook_expires: user.webhook_expires || null, mention: user.mention || "none" };
 }
 function userRuleRows(userId) { return store.rows("SELECT id,name,query,max_price,discount,enabled,kind,min_minutes,max_minutes,created FROM user_rules WHERE user_id=? ORDER BY id", userId); }
 function userRulePayload(data) {
@@ -1417,10 +1420,11 @@ function apiData(request,pathname){
   if(pathname==="/api/me/alerts") { const user=userFromRequest(request); if(!user) throw Object.assign(new Error("Anmeldung erforderlich"),{status:401}); return store.rows("SELECT a.id,a.uid,a.price,a.created,a.sent,a.attempts,a.error,r.name rule,r.kind FROM user_alerts a JOIN user_rules r ON r.id=a.user_rule_id WHERE r.user_id=? ORDER BY a.created DESC LIMIT 100",user.id); }
   if(pathname==="/api/status"){
     const count=table=>store.db.prepare(`SELECT COUNT(*) n FROM ${table}`).get().n;
-    const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots")};
+    const data={...status,public_site:publicMode(),now:Date.now()/1000,market_updated:store.get("market_updated"),abc_updated:store.get("abc_updated"),auctions_updated:store.get("auctions_updated"),stream_updated:store.get("stream_updated"),market_items:count("market"),active_auctions:store.db.prepare("SELECT COUNT(*) n FROM auctions WHERE active=1").get().n,sales:count("sales"),history_points:count("history"),history_items:store.db.prepare("SELECT COUNT(DISTINCT material) n FROM history").get().n,snapshots:count("snapshots"),maintenance:store.get("maintenance",{enabled:false,message:""})};
     if(publicMode()){delete data.watched_player;delete data.bot_connected;}else Object.assign(data,{webhook_configured:Boolean(env("DISCORD_WEBHOOK_URL")),bot_configured:Boolean(env("DISCORD_BOT_TOKEN")),bot_connected:Boolean(status.bot_connected),ping_target:env("PING_TARGET","everyone")});
     return data;
   }
+  if(pathname==="/api/maintenance") return store.get("maintenance",{enabled:false,message:""});
   if(pathname==="/api/market"){
     const dayAgo=Date.now()/1000-86400;
     return store.rows("SELECT * FROM market ORDER BY material").map(row=>{
@@ -1589,12 +1593,14 @@ async function handleRequest(request,response){
     if(request.method==="POST"&&pathname==="/api/me/webhook/test"){const user=userFromRequest(request);if(!user||!user.webhook)throw Object.assign(new Error("Zuerst einen Webhook speichern."),{status:400});const retry=await sendWebhook({content:"✅ OPSUCHT Radar ist verbunden. Deine persönlichen Alarme werden hier gemeldet.",allowed_mentions:{parse:[]}},user.webhook);if(retry)throw Object.assign(new Error("Discord begrenzt Anfragen. Bitte kurz warten."),{status:429});jsonResponse(response,{ok:true});return;}
     if(request.method==="POST"&&pathname==="/api/me/minecraft"){
       const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});
+      const edition=String(data.edition||"java").trim().toLowerCase();
+      if(!["java","bedrock"].includes(edition))throw Object.assign(new Error("Edition muss Java oder Bedrock sein."),{status:400});
       const profile=await resolveMinecraftAccount(data.username);
       const conflict=store.db.prepare("SELECT id FROM users WHERE minecraft_uuid=? AND id<>? AND minecraft_verified=1").get(profile.uuid,user.id);
       if(conflict)throw Object.assign(new Error("Dieser Minecraft-Account ist bereits verifiziert verknüpft."),{status:409});
-      store.db.prepare("UPDATE users SET minecraft_uuid=?,minecraft_username=?,minecraft_verified=0,minecraft_verified_at=NULL WHERE id=?").run(profile.uuid,profile.username,user.id);
-      const challenge=createMinecraftChallenge(user.id,profile);
-      jsonResponse(response,{ok:true,verified:false,challenge,user:userPublic({...user,minecraft_uuid:profile.uuid,minecraft_username:profile.username,minecraft_verified:false,minecraft_verified_at:null})});return;
+      store.db.prepare("UPDATE users SET minecraft_uuid=?,minecraft_username=?,minecraft_edition=?,minecraft_verified=0,minecraft_verified_at=NULL WHERE id=?").run(profile.uuid,profile.username,edition,user.id);
+      const challenge=createMinecraftChallenge(user.id,profile,edition);
+      jsonResponse(response,{ok:true,verified:false,challenge,user:userPublic({...user,minecraft_uuid:profile.uuid,minecraft_username:profile.username,minecraft_edition:edition,minecraft_verified:false,minecraft_verified_at:null})});return;
     }
     if(request.method==="POST"&&pathname==="/api/me/minecraft/verify"){
       throw Object.assign(new Error("Die Besitzprüfung wird ausschließlich vom OPSUCHT-Minecraft-Server bestätigt."),{status:403});
@@ -1616,10 +1622,10 @@ async function handleRequest(request,response){
       if(username&&username.toLowerCase()!==String(row.minecraft_username).toLowerCase())throw Object.assign(new Error("Minecraft-Name passt nicht zur Challenge."),{status:409});
       const conflict=store.db.prepare("SELECT id FROM users WHERE minecraft_uuid=? AND id<>? AND minecraft_verified=1").get(row.minecraft_uuid,row.user_id);if(conflict){store.db.prepare("UPDATE minecraft_link_challenges SET used=1 WHERE id=?").run(row.id);throw Object.assign(new Error("Dieser Minecraft-Account ist bereits verifiziert verknüpft."),{status:409});}
       store.db.prepare("UPDATE minecraft_link_challenges SET used=1,verified_at=? WHERE id=?").run(now,row.id);
-      store.db.prepare("UPDATE users SET minecraft_uuid=?,minecraft_username=?,minecraft_verified=1,minecraft_verified_at=? WHERE id=?").run(row.minecraft_uuid,row.minecraft_username,now,row.user_id);
+      store.db.prepare("UPDATE users SET minecraft_uuid=?,minecraft_username=?,minecraft_edition=?,minecraft_verified=1,minecraft_verified_at=? WHERE id=?").run(row.minecraft_uuid,row.minecraft_username,row.minecraft_edition||"java",now,row.user_id);
       jsonResponse(response,{ok:true,verified:true});return;
     }
-    if(request.method==="DELETE"&&pathname==="/api/me/minecraft"){const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});store.db.prepare("UPDATE users SET minecraft_uuid=NULL,minecraft_username=NULL,minecraft_verified=0,minecraft_verified_at=NULL WHERE id=?").run(user.id);jsonResponse(response,{ok:true});return;}
+    if(request.method==="DELETE"&&pathname==="/api/me/minecraft"){const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});store.db.prepare("UPDATE users SET minecraft_uuid=NULL,minecraft_username=NULL,minecraft_edition=NULL,minecraft_verified=0,minecraft_verified_at=NULL WHERE id=?").run(user.id);jsonResponse(response,{ok:true});return;}
     if(request.method==="POST"&&pathname==="/api/me/rules"){
       const user=userFromRequest(request);if(!user)throw Object.assign(new Error("Anmeldung erforderlich"),{status:401});const rule=userRulePayload(data);const duplicate=store.db.prepare("SELECT 1 FROM user_rules WHERE user_id=? AND name=?").get(user.id,rule.name);if(duplicate)throw Object.assign(new Error("Du hast bereits eine Regel mit diesem Namen."),{status:409});store.db.prepare("INSERT INTO user_rules(user_id,name,query,max_price,discount,enabled,kind,min_minutes,max_minutes,created) VALUES(?,?,?,?,?,?,?,?,?,?)").run(user.id,rule.name,rule.query,rule.max_price,rule.discount,rule.enabled?1:0,rule.kind,rule.min_minutes,rule.max_minutes,Date.now()/1000);for(const a of store.auctionList())queueUserRuleAlerts(a);jsonResponse(response,{ok:true},201);return;
     }
@@ -1631,6 +1637,11 @@ async function handleRequest(request,response){
     const ruleMatch=pathname.match(/^\/api\/rules\/(\d+)$/);
     if(ruleMatch&&(request.method==="PUT"||request.method==="DELETE")){
       const id=Number(ruleMatch[1]);if(request.method==="DELETE")store.db.prepare("DELETE FROM rules WHERE id=?").run(id);else{validRulePayload(data);store.upsertRule(data,id);for(const a of store.auctionList())queueRuleAlerts(a);}jsonResponse(response,{ok:true});return;
+    }
+    if(request.method==="POST"&&pathname==="/api/maintenance"){
+      const enabled=Boolean(data.enabled),message=String(data.message||"").trim().slice(0,240);
+      store.set("maintenance",{enabled,message,updated:Date.now()/1000});
+      jsonResponse(response,{ok:true,maintenance:store.get("maintenance")});return;
     }
     if(request.method==="POST"&&pathname==="/api/settings"){
       if(publicMode()){jsonResponse(response,{error:"Auf dem öffentlichen Radar werden Geheimnisse nur in der Host-Environment konfiguriert."},403);return;}const result=saveSettings(data);jsonResponse(response,result);return;
