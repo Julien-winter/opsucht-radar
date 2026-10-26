@@ -83,9 +83,14 @@ Die lokale Testausführung verändert keine Produktionsdaten. Für einen manuell
 Quellcode und Laufzeitdaten werden getrennt gehalten. APKs, Server-ZIPs, Datenbanken
 und lokale Build-Ausgaben gehören nicht in den Git-Verlauf. Ein Tag im Format
 `v1.2.3` startet `.github/workflows/release.yml`; der Workflow baut die Release-APK,
-legt eine SHA-256-Prüfsummendatei bei und veröffentlicht APK sowie ein bereinigtes
-Server-Quellarchiv als GitHub-Release-Assets. Die Android-App fragt nur die Release-
-Metadaten ab und lädt niemals beliebige Dateien aus dem Repository herunter.
+legt eine SHA-256-Prüfsummendatei bei und veröffentlicht ausschließlich APK und
+Prüfsumme als GitHub-Release-Assets. Die Android-App fragt nur die Release-Metadaten
+ab und lädt niemals beliebige Dateien aus dem Repository herunter.
+
+Der vollständige Verlauf steht in [CHANGELOG.md](CHANGELOG.md) und wird direkt als
+Release-Text verwendet. Der iOS-Code bleibt im Ordner `ios-app/` im Repository. Eine
+signierte `.ipa` kann erst auf macOS mit Xcode und einem Apple-Signing-Profil gebaut
+werden; sie wird deshalb nicht als ZIP oder unfertiges Release-Asset veröffentlicht.
 
 
 Discord-Community: https://discord.gg/RmwFCMdghA
