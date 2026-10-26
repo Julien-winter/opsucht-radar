@@ -56,6 +56,7 @@ public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 1708;
     private static final String UPDATE_PREFS = "update-download";
     private static final String UPDATE_ID = "download-id";
+    private static final String UPDATE_URI = "install-uri";
     private WebView webView;
     private SwipeRefreshLayout refreshLayout;
     private TextView offlineView;
@@ -205,6 +206,7 @@ public final class MainActivity extends Activity {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, NOTIFICATION_PERMISSION_REQUEST);
         }
         checkForUpdate();
+        resumePendingInstall();
     }
 
     private void registerUpdateReceiver() {
@@ -221,18 +223,25 @@ public final class MainActivity extends Activity {
                     Toast.makeText(MainActivity.this, "APK-Download fehlgeschlagen. Bitte erneut versuchen.", Toast.LENGTH_LONG).show();
                     return;
                 }
-                showInstallNotification(apk);
-                new AlertDialog.Builder(MainActivity.this)
-                    .setTitle("Update bereit")
-                    .setMessage("Die neue OPSUCHT-Market-Version wurde heruntergeladen.")
-                    .setNegativeButton("Später", null)
-                    .setPositiveButton("Jetzt installieren", (dialog, which) -> installApk(apk))
-                    .show();
+                showUpdateReady(apk);
             }
         };
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(updateReceiver, filter);
+    }
+
+    /** Opens an in-app install dialog as soon as DownloadManager finishes. */
+    private void showUpdateReady(Uri apk) {
+        if (apk == null) return;
+        getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().putString(UPDATE_URI, apk.toString()).apply();
+        showInstallNotification(apk);
+        new AlertDialog.Builder(MainActivity.this)
+            .setTitle("Update bereit")
+            .setMessage("Die neue OPSUCHT-Market-Version wurde heruntergeladen.")
+            .setNegativeButton("Später", null)
+            .setPositiveButton("Jetzt installieren", (dialog, which) -> installApk(apk))
+            .show();
     }
 
     private void showInstallNotification(Uri apk) {
@@ -281,6 +290,7 @@ public final class MainActivity extends Activity {
     private void installApk(Uri apk) {
         if (apk == null) return;
         if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().putString(UPDATE_URI, apk.toString()).apply();
             try {
                 Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                     Uri.parse("package:" + getPackageName()));
@@ -295,10 +305,23 @@ public final class MainActivity extends Activity {
         install.setDataAndType(apk, "application/vnd.android.package-archive");
         install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
+            getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_URI).apply();
             startActivity(install);
         } catch (Exception error) {
             Toast.makeText(this, "Kein Paket-Installer verfügbar. Öffne die Datei bitte aus Downloads.", Toast.LENGTH_LONG).show();
         }
+    }
+
+    /** Resume installation automatically when returning from Android settings. */
+    private void resumePendingInstall() {
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) return;
+        String raw = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).getString(UPDATE_URI, "");
+        if (raw == null || raw.isEmpty()) return;
+        try {
+            Uri apk = Uri.parse(raw);
+            getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_URI).apply();
+            mainHandler.postDelayed(() -> installApk(apk), 180);
+        } catch (Exception ignored) { }
     }
 
     /** Recover a completed update if Android killed the activity during download. */
@@ -316,7 +339,7 @@ public final class MainActivity extends Activity {
                 if (apk != null) {
                     pendingDownloadId = -1L;
                     getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_ID).apply();
-                    showInstallNotification(apk);
+                    showUpdateReady(apk);
                 }
             } else if (status == DownloadManager.STATUS_FAILED) {
                 getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().remove(UPDATE_ID).apply();
@@ -389,6 +412,10 @@ public final class MainActivity extends Activity {
         backgrounded = false;
         if (refreshLayout != null) refreshLayout.setRefreshing(false);
         if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad();
+        // Returning from Android's "install unknown apps" settings resumes
+        // this activity without recreating it. Continue the pending install
+        // here so the user never has to open the notification manually.
+        resumePendingInstall();
         // A release may have been published while the app was suspended or
         // offline. Re-check periodically instead of requiring a full restart.
         if (isNetworkAvailable()) checkForUpdate();
@@ -475,7 +502,7 @@ public final class MainActivity extends Activity {
             if (manager == null) throw new IllegalStateException("Download-Dienst nicht verfügbar");
             pendingDownloadId = manager.enqueue(request);
             getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().putLong(UPDATE_ID, pendingDownloadId).apply();
-            Toast.makeText(this, "Download gestartet. Die Android-Benachrichtigung öffnet die APK danach.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Download gestartet. Nach dem Download erscheint automatisch der Installationsdialog.", Toast.LENGTH_LONG).show();
         } catch (Exception error) { Toast.makeText(this, "Download konnte nicht gestartet werden.", Toast.LENGTH_LONG).show(); }
     }
 

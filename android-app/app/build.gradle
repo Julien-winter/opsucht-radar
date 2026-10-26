@@ -6,6 +6,11 @@ def radarUrl = (project.findProperty('opsuchtUrl') ?: 'http://45.93.249.214:6381
 // The APK checks this public GitHub release endpoint for optional updates.
 // A build property can still override it for forks or staging repositories.
 def updateApi = (project.findProperty('opsuchtUpdateApi') ?: 'https://api.github.com/repos/Julien-winter/opsucht-radar/releases/latest').toString()
+def releaseStoreFile = project.findProperty('releaseStoreFile')?.toString()
+def releaseStorePassword = project.findProperty('releaseStorePassword')?.toString()
+def releaseKeyAlias = project.findProperty('releaseKeyAlias')?.toString()
+def releaseKeyPassword = project.findProperty('releaseKeyPassword')?.toString()
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
 
 android {
     namespace 'net.opsucht.radar'
@@ -15,20 +20,31 @@ android {
         applicationId 'net.opsucht.radar'
         minSdk 23
         targetSdk 35
-        versionCode 10
-        versionName '1.0.9'
+        versionCode 11
+        versionName '1.1.0'
         buildConfigField 'String', 'RADAR_URL', '"' + radarUrl.replace('\\', '\\\\').replace('"', '\\"') + '"'
         buildConfigField 'String', 'UPDATE_API', '"' + updateApi.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             shrinkResources false
-            // Existing public APKs were signed with the standard Android
-            // debug key. Keep that signing identity for update compatibility
-            // until a permanent release keystore is configured in CI.
-            signingConfig signingConfigs.debug
+            // CI supplies the permanent release keystore through secrets.
+            // Keep the debug fallback for local development only; the release
+            // workflow fails before building when its signing secrets are absent.
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

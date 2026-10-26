@@ -34,9 +34,34 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Configure permanent release signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.OPSUCHT_RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.OPSUCHT_RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.OPSUCHT_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.OPSUCHT_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [[ -n "$KEYSTORE_BASE64" ]] || { echo "Fehlendes GitHub-Secret: OPSUCHT_RELEASE_KEYSTORE_BASE64 (einmalig im Repository hinterlegen)" >&2; exit 1; }
+          [[ -n "$STORE_PASSWORD" ]] || { echo "Fehlendes GitHub-Secret: OPSUCHT_RELEASE_STORE_PASSWORD" >&2; exit 1; }
+          [[ -n "$KEY_ALIAS" ]] || { echo "Fehlendes GitHub-Secret: OPSUCHT_RELEASE_KEY_ALIAS" >&2; exit 1; }
+          [[ -n "$KEY_PASSWORD" ]] || { echo "Fehlendes GitHub-Secret: OPSUCHT_RELEASE_KEY_PASSWORD" >&2; exit 1; }
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/opsucht-release.jks"
+          test -s "$RUNNER_TEMP/opsucht-release.jks"
+
       - name: Build Android APK
         working-directory: android-app
-        run: bash ./gradlew assembleRelease --no-daemon
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.OPSUCHT_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.OPSUCHT_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.OPSUCHT_RELEASE_KEY_PASSWORD }}
+        run: >-
+          bash ./gradlew assembleRelease --no-daemon
+          -PreleaseStoreFile="$RUNNER_TEMP/opsucht-release.jks"
+          -PreleaseStorePassword="$RELEASE_STORE_PASSWORD"
+          -PreleaseKeyAlias="$RELEASE_KEY_ALIAS"
+          -PreleaseKeyPassword="$RELEASE_KEY_PASSWORD"
 
       - name: Prepare release assets
         shell: bash

@@ -1,5 +1,11 @@
 # OPSUCHT Market – Changelog
 
+## 1.1.0
+
+- Updates öffnen nach dem Download automatisch den Installationsdialog; die Benachrichtigung bleibt nur als Fallback.
+- Nach der Android-Freigabe für unbekannte Apps wird die Installation beim Zurückkehren automatisch fortgesetzt.
+- Release-Builds werden künftig nur noch mit einem dauerhaft hinterlegten Keystore akzeptiert, damit Android keinen Signaturkonflikt mehr erzeugt.
+
 ## 1.0.9
 
 - Android-App nutzt jetzt exakt das aktuelle OPSUCHT-Icon der Website als Launcher- und Benachrichtigungs-Icon.
