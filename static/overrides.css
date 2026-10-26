@@ -170,3 +170,22 @@
   #market .table-wrap tbody td:first-child .item-name b{font-size:13px}
   #market .table-wrap tbody td:first-child .item-name small{font-size:9px;margin-top:3px}
 }
+
+/* Keep the market calculator readable on phones. The quantity control gets
+   its own compact row and calculated totals remain easy to scan. */
+@media(max-width:700px){
+  #detail-content .market-calculator{display:block;padding:14px;margin:16px 0 20px}
+  #detail-content .market-calculator>div:first-child{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,.7fr);align-items:end;gap:12px;padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid #29483b}
+  #detail-content .market-calculator>div:first-child>small{grid-column:1/-1}
+  #detail-content .market-calculator>div:first-child label{margin:0}
+  #detail-content .market-calculator>div:first-child input{min-height:48px;max-width:none;font-size:18px;font-variant-numeric:tabular-nums}
+  #detail-content .market-calculator #market-calculation{width:100%}
+  #detail-content .market-calculator #market-calculation .detail-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0}
+  #detail-content .market-calculator #market-calculation .detail-fields>div{min-height:82px;padding:12px 11px;border:1px solid #293b43;border-radius:10px;background:#17232d;justify-content:space-between}
+  #detail-content .market-calculator #market-calculation .detail-fields>div small{min-height:29px;line-height:1.35}
+  #detail-content .market-calculator #market-calculation .detail-fields>div b{font-size:16px}
+  #detail-content .market-calculator .market-comparison{margin-top:12px}
+  #detail-content .market-calculator .market-comparison>div{grid-template-columns:1fr}
+  #detail-content .chart{height:180px;margin:16px 0 6px}
+  #detail-content .chart-labels{font-size:9px}
+}
