@@ -1,0 +1,42 @@
+name: OPSUCHTMarket
+
+options:
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+
+targets:
+  OPSUCHTMarket:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: OpsuchtMarketApp.swift
+      - path: ContentView.swift
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: OPSUCHT Market
+        CFBundleIconName: AppIcon
+        CFBundleShortVersionString: "1.1.0"
+        CFBundleVersion: "11"
+        LSRequiresIPhoneOS: true
+        RadarURL: "http://45.93.249.214:63816/"
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: net.opsucht.radar.ios
+        PRODUCT_NAME: OPSUCHTMarket
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      gatherCoverageData: false
+      archive: true
