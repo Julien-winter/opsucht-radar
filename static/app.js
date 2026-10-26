@@ -38,23 +38,37 @@ const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuan
 const TELEMETRY_CONSENT_KEY = 'opsucht-telemetry-consent-v1';
 const TELEMETRY_QUEUE_KEY = 'opsucht-telemetry-queue-v1';
 const telemetryStartedAt = Date.now();
+let telemetryActiveSince = document.hidden ? null : telemetryStartedAt;
+let telemetryOnlineSince = navigator.onLine === false ? null : telemetryStartedAt;
+const telemetryUsage = {activeSeconds:0,onlineSeconds:0,pageViews:0,visibilityChanges:0,onlineEvents:0,offlineEvents:0};
 let telemetryFlushBusy = false;
 function telemetryConsent(){return localStorage.getItem(TELEMETRY_CONSENT_KEY)==='granted';}
-function telemetryQueue(){try{const q=JSON.parse(localStorage.getItem(TELEMETRY_QUEUE_KEY)||'[]');return Array.isArray(q)?q.slice(-40):[];}catch{return[];}}
+function telemetryQueue(){try{const now=Date.now(),q=JSON.parse(localStorage.getItem(TELEMETRY_QUEUE_KEY)||'[]');return Array.isArray(q)?q.filter(item=>now-Date.parse(item?.at||0)<30*86400000).slice(-80):[];}catch{return[];}}
 function telemetryConnection(){const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;return c?{effectiveType:String(c.effectiveType||'unknown').slice(0,16),saveData:Boolean(c.saveData),downlink:Number.isFinite(Number(c.downlink))?Math.min(100,Number(c.downlink)):undefined}:undefined;}
 function deviceTelemetry(){
   const ua=String(navigator.userAgent||''), platform=String(navigator.userAgentData?.platform||navigator.platform||'unknown');
   const mobile=Boolean(navigator.userAgentData?.mobile||/Android|iPhone|iPad|Mobile/i.test(ua));
-  let model='unknown', manufacturer='unknown';
+  let model='unknown', manufacturer='unknown', modelCode='';
   const android=ua.match(/Android[^;)]*;\s*(?:[a-z]{2,3}-[A-Z]{2,3};\s*)?(?:wv;\s*)?([^;)]+?)\s+Build\//i);
-  if(android){model=android[1].trim();const m=model.toLowerCase();manufacturer=/samsung|sm-[a-z0-9-]+/.test(m)?'samsung':/pixel|google/.test(m)?'google':/xiaomi|redmi|poco/.test(m)?'xiaomi':/huawei|honor/.test(m)?'huawei':/oneplus/.test(m)?'oneplus':'android';}
+  if(android){model=android[1].trim();modelCode=model;const m=model.toLowerCase();manufacturer=/samsung|sm-[a-z0-9-]+/.test(m)?'samsung':/pixel|google/.test(m)?'google':/xiaomi|redmi|poco/.test(m)?'xiaomi':/huawei|honor/.test(m)?'huawei':/oneplus/.test(m)?'oneplus':/nothing|a059/.test(m)?'nothing':'android';}
   else if(/iPhone/i.test(ua)){manufacturer='apple';model='iphone';} else if(/iPad/i.test(ua)){manufacturer='apple';model='ipad';}
   else {manufacturer=/Macintosh/i.test(ua)?'apple':/Windows/i.test(ua)?'microsoft':/Linux/i.test(ua)?'linux':'unknown';model=mobile?'mobile':'desktop';}
+  const known={a059:{manufacturer:'nothing',model:'phone-3a',displayName:'Nothing Phone 3a'}};
+  const mapped=known[String(modelCode||model).toLowerCase()];
+  if(mapped){manufacturer=mapped.manufacturer;model=mapped.model;}
   const browser=/Edg\//.test(ua)?'edge':/Firefox\//.test(ua)?'firefox':/Chrome\//.test(ua)?'chrome':/Safari\//.test(ua)?'safari':'other';
-  return {consent:true,manufacturer,model,platform,os:platform,browser,mobile,appVersion:'web',locale:String(navigator.language||'unknown').slice(0,16),timezone:String(Intl.DateTimeFormat().resolvedOptions().timeZone||'unknown').slice(0,48),viewport:{width:Math.min(10000,innerWidth||0),height:Math.min(10000,innerHeight||0)},screen:{width:Math.min(10000,screen.width||0),height:Math.min(10000,screen.height||0),dpr:Math.min(10,devicePixelRatio||1)},deviceMemory:Number.isFinite(Number(navigator.deviceMemory))?Math.min(64,Number(navigator.deviceMemory)):undefined,hardwareConcurrency:Number.isFinite(Number(navigator.hardwareConcurrency))?Math.min(128,Number(navigator.hardwareConcurrency)):undefined,colorScheme:matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light',connection:telemetryConnection()};
+  const orientation=screen.orientation?.type||((innerWidth||0)>=(innerHeight||0)?'landscape':'portrait');
+  return {consent:true,manufacturer,model,...(modelCode?{modelCode}:{}),...(mapped?.displayName?{displayName:mapped.displayName}:{}),platform,os:platform,browser,mobile,appVersion:'web',locale:String(navigator.language||'unknown').slice(0,16),timezone:String(Intl.DateTimeFormat().resolvedOptions().timeZone||'unknown').slice(0,48),viewport:{width:Math.min(10000,innerWidth||0),height:Math.min(10000,innerHeight||0)},screen:{width:Math.min(10000,screen.width||0),height:Math.min(10000,screen.height||0),dpr:Math.min(10,devicePixelRatio||1),colorDepth:Math.min(64,screen.colorDepth||0),orientation},deviceMemory:Number.isFinite(Number(navigator.deviceMemory))?Math.min(64,Number(navigator.deviceMemory)):undefined,hardwareConcurrency:Number.isFinite(Number(navigator.hardwareConcurrency))?Math.min(128,Number(navigator.hardwareConcurrency)):undefined,maxTouchPoints:Number.isFinite(Number(navigator.maxTouchPoints))?Math.min(20,Number(navigator.maxTouchPoints)):0,reducedMotion:matchMedia?.('(prefers-reduced-motion: reduce)').matches===true,colorScheme:matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light',connection:telemetryConnection()};
 }
-function queueTelemetry(event, extra={}){if(!telemetryConsent())return;const item={...deviceTelemetry(),event:String(event).slice(0,32),at:new Date().toISOString(),...extra};const q=telemetryQueue();q.push(item);try{localStorage.setItem(TELEMETRY_QUEUE_KEY,JSON.stringify(q.slice(-40)));}catch{};flushTelemetry();}
-async function flushTelemetry(){if(telemetryFlushBusy||!telemetryConsent()||!navigator.onLine)return;const q=telemetryQueue();if(!q.length)return;telemetryFlushBusy=true;try{const r=await fetch('/api/telemetry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(q[0]),keepalive:true});if(r.ok){q.shift();localStorage.setItem(TELEMETRY_QUEUE_KEY,JSON.stringify(q));if(q.length)await flushTelemetry();}}catch{}finally{telemetryFlushBusy=false;}}
+function usageSnapshot(){const now=Date.now();let active=telemetryUsage.activeSeconds,online=telemetryUsage.onlineSeconds;if(telemetryActiveSince!==null)active+=(now-telemetryActiveSince)/1000;if(telemetryOnlineSince!==null)online+=(now-telemetryOnlineSince)/1000;return {activeSeconds:Math.min(86400,Math.round(active)),onlineSeconds:Math.min(86400,Math.round(online)),pageViews:telemetryUsage.pageViews,visibilityChanges:telemetryUsage.visibilityChanges,onlineEvents:telemetryUsage.onlineEvents,offlineEvents:telemetryUsage.offlineEvents,sessionStartedAt:new Date(telemetryStartedAt).toISOString()};}
+function queueTelemetry(event, extra={}){if(!telemetryConsent())return;const item={...deviceTelemetry(),event:String(event).slice(0,32),at:new Date().toISOString(),...usageSnapshot(),...extra};const q=telemetryQueue();q.push(item);try{localStorage.setItem(TELEMETRY_QUEUE_KEY,JSON.stringify(q.slice(-80)));}catch{};flushTelemetry();}
+async function flushTelemetry(){if(telemetryFlushBusy||!telemetryConsent()||navigator.onLine===false)return;let q=telemetryQueue();if(!q.length)return;telemetryFlushBusy=true;try{while(q.length&&navigator.onLine!==false){const r=await fetch('/api/telemetry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(q[0]),keepalive:true});if(!r.ok)break;q.shift();try{localStorage.setItem(TELEMETRY_QUEUE_KEY,JSON.stringify(q));}catch{break;}}}catch{}finally{telemetryFlushBusy=false;}}
+function telemetryError(error, context){if(!telemetryConsent())return;const message=String(error?.name||error||'Error').replace(/[^a-zA-Z0-9._-]/g,'').slice(0,32)||'Error';queueTelemetry('error',{errorType:message,errorContext:String(context||'unknown').replace(/[^a-zA-Z0-9._-]/g,'').slice(0,32)});}
+function telemetryPerformance(){if(!telemetryConsent()||!performance?.getEntriesByType)return;const nav=performance.getEntriesByType('navigation')[0];if(nav)queueTelemetry('performance',{loadMs:Math.min(60000,Math.round(nav.loadEventEnd||0)),domReadyMs:Math.min(60000,Math.round(nav.domContentLoadedEventEnd||0)),transferKb:Math.min(10240,Math.round((nav.transferSize||0)/1024))});}
+const telemetryFeatureIds=new Set(['market','abc','auctions','catalog','values','merchant','auth','rules','consent-accept','consent-reject','privacy-settings','privacy-save','privacy-delete','minecraft-link','minecraft-unlink']);
+document.addEventListener('click',event=>{if(!telemetryConsent())return;const control=event.target.closest?.('button,[data-page],[data-goto]');if(!control)return;const id=control.id||control.dataset.page||control.dataset.goto;if(id&&telemetryFeatureIds.has(id))queueTelemetry('feature',{feature:id});},{passive:true});
+addEventListener('error',event=>telemetryError(event.error||event.message,'window'),true);
+addEventListener('unhandledrejection',event=>telemetryError(event.reason,'promise'));
 function sendTelemetry(){queueTelemetry('session_start');}
 function initPrivacyControls(){
   const banner=$('#consent-banner'),dialog=$('#privacy-dialog'),toggle=$('#telemetry-consent');
@@ -66,15 +80,18 @@ function initPrivacyControls(){
   $('#privacy-save')?.addEventListener('click',()=>{apply(Boolean(toggle?.checked));dialog?.close();});
   $('#privacy-delete')?.addEventListener('click',()=>{apply(false);if(toggle)toggle.checked=false;dialog?.close();show();toast('Optionale Statistik und lokale Warteschlange wurden gelöscht.');});
   if(telemetryConsent())flushTelemetry();
-  addEventListener('online',flushTelemetry,{passive:true});
-  addEventListener('visibilitychange',()=>{if(document.hidden)queueTelemetry('session_end',{durationSec:Math.min(86400,Math.round((Date.now()-telemetryStartedAt)/1000))});else queueTelemetry('visibility',{state:'visible'});},{passive:true});
-  addEventListener('pagehide',()=>queueTelemetry('session_end',{durationSec:Math.min(86400,Math.round((Date.now()-telemetryStartedAt)/1000))}),{passive:true});
+  if(telemetryConsent()) { setTimeout(telemetryPerformance, 0); addEventListener('load', telemetryPerformance, {once:true}); }
+  addEventListener('online',()=>{telemetryUsage.onlineEvents++;telemetryOnlineSince=Date.now();queueTelemetry('network',{state:'online'});flushTelemetry();},{passive:true});
+  addEventListener('offline',()=>{const now=Date.now();if(telemetryOnlineSince!==null){telemetryUsage.onlineSeconds+=(now-telemetryOnlineSince)/1000;telemetryOnlineSince=null;}telemetryUsage.offlineEvents++;queueTelemetry('network',{state:'offline'});},{passive:true});
+  addEventListener('visibilitychange',()=>{const now=Date.now();telemetryUsage.visibilityChanges++;if(document.hidden){if(telemetryActiveSince!==null){telemetryUsage.activeSeconds+=(now-telemetryActiveSince)/1000;telemetryActiveSince=null;}queueTelemetry('session_pause',{state:'hidden'});}else{telemetryActiveSince=now;queueTelemetry('visibility',{state:'visible'});}}, {passive:true});
+  addEventListener('pagehide',()=>{const now=Date.now();if(telemetryActiveSince!==null){telemetryUsage.activeSeconds+=(now-telemetryActiveSince)/1000;telemetryActiveSince=null;}if(telemetryOnlineSince!==null){telemetryUsage.onlineSeconds+=(now-telemetryOnlineSince)/1000;telemetryOnlineSince=null;}queueTelemetry('session_end',{sessionEndedAt:new Date(now).toISOString()});},{passive:true});
 }// Incremented for every modal request so a slower response cannot overwrite a
 // detail view that the user has already replaced with another item.
 let detailRequestId = 0;
 let toastTimer;
 function toast(text, error=false) { $('#toast').textContent=text; $('#toast').classList.toggle('error',error); $('#toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').hidden=true,6000); }
 async function api(path, method='GET', body) {
+  const requestStartedAt=performance.now();
   const options = {method,headers:{}};
   if (state.token) options.headers.Authorization='Bearer '+state.token;
   if (method !== 'GET') { options.headers['Content-Type']='application/json'; options.body=JSON.stringify(body ?? {}); }
@@ -85,10 +102,12 @@ async function api(path, method='GET', body) {
   let r;
   try { r = await fetch('/api/'+path, options); }
   catch (error) {
+    telemetryError(error,'api');
     if (error?.name === 'AbortError') throw Error('Anfrage dauerte zu lange. Bitte später erneut versuchen.');
     throw Error('Server nicht erreichbar. Bitte Verbindung prüfen.');
   } finally { clearTimeout(timeout); }
   const data = await r.json().catch(()=>({error:r.status === 401 ? 'Admin-Token erforderlich.' : 'Anfrage fehlgeschlagen.'}));
+  if (telemetryConsent() && (r.status>=400 || performance.now()-requestStartedAt>3000)) queueTelemetry('api_result',{apiStatus:Math.min(599,r.status),apiDurationMs:Math.min(60000,Math.round(performance.now()-requestStartedAt))});
   if (!r.ok) throw Error(data.error || 'Anfrage fehlgeschlagen');
   return data;
 }
@@ -116,7 +135,7 @@ const pages = {
 };
 function page(name, options={}) {
   state.page=name;
-  if (telemetryConsent()) queueTelemetry('page_view',{page:String(name).slice(0,32)});
+  if (telemetryConsent()) { telemetryUsage.pageViews++; queueTelemetry('page_view',{page:String(name).slice(0,32)}); }
   document.querySelectorAll('.page').forEach(p=>p.hidden=p.id!==name);
   document.querySelectorAll('nav button').forEach(b=>{const selected=b.dataset.page===name;b.classList.toggle('selected',selected);b.setAttribute('aria-current',selected?'page':'false');});
   $('#title').textContent=pages[name][0]; $('#subtitle').textContent=pages[name][1]; $('#crumb').textContent=pages[name][2];

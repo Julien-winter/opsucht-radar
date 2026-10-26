@@ -1328,15 +1328,34 @@ function telemetryPayload(data, request) {
   const screen = data.screen && typeof data.screen === "object" ? {
     width: Math.max(0, Math.min(10000, Number(data.screen.width) || 0)),
     height: Math.max(0, Math.min(10000, Number(data.screen.height) || 0)),
-    dpr: Math.max(0, Math.min(10, Number(data.screen.dpr) || 0))
+    dpr: Math.max(0, Math.min(10, Number(data.screen.dpr) || 0)), colorDepth: Math.max(0, Math.min(64, Number(data.screen.colorDepth) || 0)), orientation: telemetryValue(data.screen.orientation, "unknown").slice(0,16)
   } : undefined;
   const clean = (value, max = 64) => telemetryValue(value).slice(0, max);
+  const modelMap = { a059: { manufacturer: "nothing", model: "phone-3a", displayName: "Nothing Phone 3a" } };
+  const modelCode = clean(data.modelCode, 32);
+  const mapped = modelMap[String(modelCode || model).toLowerCase()];
+  const readableManufacturer = mapped?.manufacturer || manufacturer;
+  const readableModel = mapped?.model || model;
   const viewport = data.viewport && typeof data.viewport === "object" ? { width: Math.max(0, Math.min(10000, Number(data.viewport.width) || 0)), height: Math.max(0, Math.min(10000, Number(data.viewport.height) || 0)) } : undefined;
   const connection = data.connection && typeof data.connection === "object" ? { effectiveType: clean(data.connection.effectiveType, 16), saveData: Boolean(data.connection.saveData) } : undefined;
-  const event = clean(data.event, 32), page = clean(data.page, 32);
-  const durationSec = Number.isFinite(Number(data.durationSec)) ? Math.max(0, Math.min(86400, Number(data.durationSec))) : undefined;
-  return { at: new Date().toISOString(), manufacturer, model, platform, os, appVersion,
+  const event = data.event == null ? undefined : clean(data.event, 32), page = data.page == null ? undefined : clean(data.page, 32);
+  const boundedNumber = (value, max) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(max, Number(value))) : undefined;
+  const durationSec = boundedNumber(data.durationSec, 86400), activeSeconds = boundedNumber(data.activeSeconds, 86400), onlineSeconds = boundedNumber(data.onlineSeconds, 86400);
+  const pageViews = boundedNumber(data.pageViews, 100000), visibilityChanges = boundedNumber(data.visibilityChanges, 100000), onlineEvents = boundedNumber(data.onlineEvents, 100000), offlineEvents = boundedNumber(data.offlineEvents, 100000);
+  const maxTouchPoints = boundedNumber(data.maxTouchPoints, 20);
+  const apiStatus = boundedNumber(data.apiStatus, 599), apiDurationMs = boundedNumber(data.apiDurationMs, 60000), loadMs = boundedNumber(data.loadMs, 60000), domReadyMs = boundedNumber(data.domReadyMs, 60000), transferKb = boundedNumber(data.transferKb, 10240);
+  const errorType = clean(data.errorType, 32), errorContext = clean(data.errorContext, 32), apiName = clean(data.apiName, 32);
+  const timestamp = value => { const text = String(value || ""); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(text)) return undefined; const parsed = Date.parse(text); return Number.isFinite(parsed) ? new Date(parsed).toISOString() : undefined; };
+  const sessionStartedAt = timestamp(data.sessionStartedAt), sessionEndedAt = timestamp(data.sessionEndedAt);
+  return { at: new Date().toISOString(), manufacturer: readableManufacturer, model: readableModel, ...(modelCode !== "unknown" ? { modelCode } : {}), ...(mapped?.displayName ? { displayName: mapped.displayName } : {}), platform, os, appVersion,
     ...(event ? { event } : {}), ...(page ? { page } : {}), ...(durationSec !== undefined ? { durationSec } : {}),
+    ...(activeSeconds !== undefined ? { activeSeconds } : {}), ...(onlineSeconds !== undefined ? { onlineSeconds } : {}),
+    ...(pageViews !== undefined ? { pageViews } : {}), ...(visibilityChanges !== undefined ? { visibilityChanges } : {}),
+    ...(onlineEvents !== undefined ? { onlineEvents } : {}), ...(offlineEvents !== undefined ? { offlineEvents } : {}),
+    ...(maxTouchPoints !== undefined ? { maxTouchPoints } : {}), ...(apiStatus !== undefined ? { apiStatus } : {}), ...(apiDurationMs !== undefined ? { apiDurationMs } : {}),
+    ...(loadMs !== undefined ? { loadMs } : {}), ...(domReadyMs !== undefined ? { domReadyMs } : {}), ...(transferKb !== undefined ? { transferKb } : {}),
+    ...(errorType ? { errorType } : {}), ...(errorContext ? { errorContext } : {}), ...(apiName ? { apiName } : {}),
+    ...(sessionStartedAt ? { sessionStartedAt } : {}), ...(sessionEndedAt ? { sessionEndedAt } : {}),
     ...(clean(data.browser, 16) ? { browser: clean(data.browser, 16) } : {}), ...(data.mobile !== undefined ? { mobile: Boolean(data.mobile) } : {}),
     ...(clean(data.locale, 16) ? { locale: clean(data.locale, 16) } : {}), ...(clean(data.timezone, 48) ? { timezone: clean(data.timezone, 48) } : {}),
     ...(viewport ? { viewport } : {}), ...(connection ? { connection } : {}),
