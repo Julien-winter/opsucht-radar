@@ -1,3 +1,3 @@
-OPSUCHT Radar v1.0.2
+OPSUCHT Radar v1.0.4
 
-Einspielen: Code und öffentliche Assets aktualisieren, data/ und .env behalten, danach Node-Prozess neu starten.
+Einspielen: Dateien aus diesem Paket über die bestehende Installation kopieren und den Node-Prozess neu starten. Den vorhandenen data/-Ordner, data/radar.sqlite, data/telemetry/ und .env behalten. Das Paket enthält keine Laufzeitdaten, Zugangsdaten oder node_modules.
