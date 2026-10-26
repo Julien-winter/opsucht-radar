@@ -176,9 +176,9 @@
    rows so a decimal price never wraps into a vertical stack. */
 .market-quote{display:flex;align-items:baseline;gap:10px;min-width:0}.market-quote>span{white-space:nowrap;font-variant-numeric:tabular-nums}.market-quote>.muted{white-space:nowrap}.market-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:4px}.market-meta .change{display:inline-block;margin-top:0}.market-meta small{font-size:9px;white-space:nowrap}
 @media(max-width:700px){
-  #market .table-wrap tbody td:nth-child(3),#market .table-wrap tbody td:nth-child(4),#market .table-wrap tbody td:nth-child(5){display:block;text-align:left}
+  #market .table-wrap tbody td:nth-child(3),#market .table-wrap tbody td:nth-child(4),#market .table-wrap tbody td:nth-child(5){display:block;text-align:left;width:100%}
   #market .table-wrap tbody td:not(:first-child)::before{display:block;margin-bottom:6px}
-  #market .market-quote{justify-content:space-between;gap:8px}
+  #market .market-quote{justify-content:space-between;gap:8px;width:100%;min-width:0}
   #market .market-quote .price,#market .market-quote .blue{font-size:18px;line-height:1.15}
   #market .market-quote>.muted{font-size:9px;color:#9aabb4}
   #market .market-meta{justify-content:flex-start;gap:8px;margin-top:5px}

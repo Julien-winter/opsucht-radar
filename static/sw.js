@@ -1,6 +1,6 @@
 // Bump this whenever the shell changes. Cache-first assets otherwise keep an
 // old app.js in Android WebViews and can hide new consent/UI fixes.
-const CACHE = 'opsucht-radar-shell-v6';
+const CACHE = 'opsucht-radar-shell-v7';
 const REMOTE_ICON_HOSTS = new Set(['img.mc-api.io', 'items.opsucht.net', 'mc-api.io']);
 const SHELL = [
   '/',

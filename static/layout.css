@@ -112,12 +112,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,su
   #market .table-wrap table{display:block;min-width:0;width:100%;white-space:normal}
   #market .table-wrap thead{display:none}
   #market .table-wrap tbody{display:grid;gap:10px;padding:10px}
-  #market .table-wrap tr{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;background:#101a21;overflow:hidden}
+  #market .table-wrap tr{display:grid;grid-template-columns:1fr;gap:0;border:1px solid var(--line);border-radius:12px;background:#101a21;overflow:hidden}
   #market .table-wrap td{display:block;padding:11px 12px;border-top:1px solid #22313a;min-width:0;overflow-wrap:anywhere}
   #market .table-wrap td:first-child{grid-column:1/-1;border-top:0;padding-bottom:9px}
   #market .table-wrap td:nth-child(2){font-size:10px;color:var(--muted)}
   #market .table-wrap td:nth-child(3),#market .table-wrap td:nth-child(4){font-size:11px}
-  #market .table-wrap td:nth-child(5){grid-column:1/-1;font-size:10px;color:var(--muted)}
+  #market .table-wrap td:nth-child(5){font-size:10px;color:var(--muted)}
   .auction-grid,.value-grid,.abc-grid{grid-template-columns:1fr;min-width:0}
   .auction-card,.value-card,.abc-card{width:100%;min-width:0}
   .auction-card .bottom{flex-wrap:wrap}
