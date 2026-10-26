@@ -52,6 +52,8 @@ public final class MainActivity extends Activity {
     private FrameLayout rootLayout;
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private boolean updateCheckStarted;
+    private long lastUpdateCheckAt;
+    private String promptedUpdateVersion = "";
     private boolean offlineFallbackAttempted;
     private boolean loadFinished;
     private long pendingDownloadId = -1L;
@@ -227,14 +229,22 @@ public final class MainActivity extends Activity {
         return manager.getActiveNetworkInfo() != null && manager.getActiveNetworkInfo().isConnected();
     }
 
-    @Override protected void onResume() { super.onResume(); if (refreshLayout != null) refreshLayout.setRefreshing(false); if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad(); }
+    @Override protected void onResume() {
+        super.onResume();
+        if (refreshLayout != null) refreshLayout.setRefreshing(false);
+        if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad();
+        // A release may have been published while the app was suspended or
+        // offline. Re-check periodically instead of requiring a full restart.
+        if (isNetworkAvailable()) checkForUpdate();
+    }
     @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
     @Override protected void onStop() { if (webView != null) webView.onPause(); super.onStop(); }
     @Override protected void onDestroy() { mainHandler.removeCallbacks(contentCheck); mainHandler.removeCallbacks(loadTimeout); if (updateReceiver != null) { try { unregisterReceiver(updateReceiver); } catch (Exception ignored) {} } updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
 
     /** Checks release metadata only; installation stays with the user. */
     private void checkForUpdate() {
-        if (updateCheckStarted || BuildConfig.UPDATE_API == null || BuildConfig.UPDATE_API.trim().isEmpty()) return;
+        long now = System.currentTimeMillis();
+        if (updateCheckStarted || now - lastUpdateCheckAt < 30 * 60 * 1000L || BuildConfig.UPDATE_API == null || BuildConfig.UPDATE_API.trim().isEmpty()) return;
         updateCheckStarted = true;
         updateExecutor.execute(() -> {
             try {
@@ -243,6 +253,9 @@ public final class MainActivity extends Activity {
                 connection.setRequestProperty("Accept", "application/vnd.github+json");
                 connection.setRequestProperty("User-Agent", "OPSUCHT-Market-Android/" + BuildConfig.VERSION_NAME);
                 if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) return;
+                // Only throttle after a successful metadata request. A failed
+                // offline check must be retried as soon as connectivity returns.
+                lastUpdateCheckAt = System.currentTimeMillis();
                 StringBuilder body = new StringBuilder();
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
                     String line; while ((line = reader.readLine()) != null) body.append(line);
@@ -251,8 +264,9 @@ public final class MainActivity extends Activity {
                 String latest = release.optString("tag_name", release.optString("name", ""));
                 String download = findApkAsset(release.optJSONArray("assets"));
                 String notes = release.optString("body", "").trim();
-                if (latest.isEmpty() || download.isEmpty() || !isNewer(latest, BuildConfig.VERSION_NAME)) return;
+                if (latest.isEmpty() || download.isEmpty() || !isNewer(latest, BuildConfig.VERSION_NAME) || latest.equals(promptedUpdateVersion)) return;
                 final String changelog = notes.isEmpty() ? "Keine zusätzlichen Änderungen veröffentlicht." : notes.substring(0, Math.min(3500, notes.length()));
+                promptedUpdateVersion = latest;
                 runOnUiThread(() -> new AlertDialog.Builder(this)
                     .setTitle("Neue OPSUCHT-Market-Version · " + latest)
                     .setMessage("Änderungen:\n\n" + changelog + "\n\nDie APK wird direkt in der App heruntergeladen. Es wird nichts ohne deine Bestätigung installiert.")
@@ -260,6 +274,7 @@ public final class MainActivity extends Activity {
                     .setPositiveButton("APK herunterladen", (dialog, which) -> downloadUpdate(download, latest))
                     .show());
             } catch (Exception ignored) { }
+            finally { updateCheckStarted = false; }
         });
     }
 

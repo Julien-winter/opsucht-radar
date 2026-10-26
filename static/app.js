@@ -591,7 +591,9 @@ async function load() {
     try{state.status=(await api('status'))||{};}catch(statusError){
       // Keep price pages usable from their local cache when the API host is
       // temporarily offline. Other pages still surface the connection error.
-      if(!['market','abc'].includes(pageAtStart))throw statusError;
+      // Merchant rates are public and cached with the other price feeds. Do
+      // not turn a temporary status failure into an offline blank screen.
+      if(!['market','abc','merchant'].includes(pageAtStart))throw statusError;
       statusAvailable=false;
       // Preserve the public/owner surface while the status request is down;
       // public deployments must not suddenly expose owner navigation offline.

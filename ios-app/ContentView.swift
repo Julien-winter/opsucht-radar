@@ -30,6 +30,7 @@ final class WebViewModel: ObservableObject {
     let url: URL
     private var monitor: NWPathMonitor?
     private var webView: WKWebView?
+    private var loadTimeout: Task<Void, Never>?
 
     init() {
         if let configured = Bundle.main.object(forInfoDictionaryKey: "RadarURL") as? String,
@@ -54,11 +55,34 @@ final class WebViewModel: ObservableObject {
     }
 
     func attach(_ webView: WKWebView) { self.webView = webView }
+    func navigationStarted() {
+        loadTimeout?.cancel()
+        isLoading = true
+        error = nil
+        loadTimeout = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(15))
+            guard let self, !Task.isCancelled, self.isLoading else { return }
+            self.isLoading = false
+            self.error = "OPSUCHT Market antwortet gerade nicht. Prüfe die Verbindung und versuche es erneut."
+        }
+    }
+    func navigationFinished() {
+        loadTimeout?.cancel()
+        isLoading = false
+        error = nil
+    }
+    func navigationFailed() {
+        loadTimeout?.cancel()
+        isLoading = false
+        error = "OPSUCHT Market konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut."
+    }
     func retry() {
         error = nil
         isLoading = true
         webView?.load(URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 15))
     }
+
+    deinit { loadTimeout?.cancel() }
 }
 
 struct RadarWebView: UIViewRepresentable {
@@ -75,7 +99,11 @@ struct RadarWebView: UIViewRepresentable {
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = context.coordinator
         view.allowsBackForwardNavigationGestures = true
+        view.scrollView.contentInsetAdjustmentBehavior = .never
+        view.isOpaque = false
+        view.backgroundColor = .clear
         model.attach(view)
+        model.navigationStarted()
         view.load(URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 15))
         return view
     }
@@ -86,13 +114,22 @@ struct RadarWebView: UIViewRepresentable {
         var parent: RadarWebView
         init(_ parent: RadarWebView) { self.parent = parent }
         func webView(_ webView: WKWebView, didStartProvisionalNavigation _: WKNavigation?) {
-            DispatchQueue.main.async { self.parent.isLoading = true; self.parent.error = nil }
+            DispatchQueue.main.async { self.parent.model.navigationStarted() }
         }
         func webView(_ webView: WKWebView, didFinish _: WKNavigation?) {
-            DispatchQueue.main.async { self.parent.isLoading = false; self.parent.error = nil }
+            DispatchQueue.main.async { self.parent.model.navigationFinished() }
         }
         func webView(_ webView: WKWebView, didFailProvisionalNavigation _: WKNavigation?, withError error: Error) {
-            DispatchQueue.main.async { self.parent.isLoading = false; self.parent.error = "OPSUCHT Market konnte nicht geladen werden. Prüfe die Verbindung und versuche es erneut." }
+            DispatchQueue.main.async { self.parent.model.navigationFailed() }
+        }
+        func webView(_ webView: WKWebView, didFail _: WKNavigation?, withError error: Error) {
+            DispatchQueue.main.async { self.parent.model.navigationFailed() }
+        }
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            DispatchQueue.main.async {
+                self.parent.model.error = "Die Webansicht wurde beendet. Tippe auf Erneut versuchen, um sie neu zu laden."
+                self.parent.model.isLoading = false
+            }
         }
     }
 }
