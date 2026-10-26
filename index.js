@@ -1332,13 +1332,14 @@ function telemetryPayload(data, request) {
   } : undefined;
   const clean = (value, max = 64) => telemetryValue(value).slice(0, max);
   const modelMap = { a059: { manufacturer: "nothing", model: "phone-3a", displayName: "Nothing Phone 3a" } };
-  const modelCode = clean(data.modelCode, 32);
+  const modelCodeRaw = String(data.modelCode || "").trim();
+  const modelCode = modelCodeRaw ? clean(modelCodeRaw, 32) : "";
   const mapped = modelMap[String(modelCode || model).toLowerCase()];
   const readableManufacturer = mapped?.manufacturer || manufacturer;
   const readableModel = mapped?.model || model;
   const viewport = data.viewport && typeof data.viewport === "object" ? { width: Math.max(0, Math.min(10000, Number(data.viewport.width) || 0)), height: Math.max(0, Math.min(10000, Number(data.viewport.height) || 0)) } : undefined;
   const connection = data.connection && typeof data.connection === "object" ? { effectiveType: clean(data.connection.effectiveType, 16), saveData: Boolean(data.connection.saveData) } : undefined;
-  const event = data.event == null ? undefined : clean(data.event, 32), page = data.page == null ? undefined : clean(data.page, 32);
+  const event = data.event == null ? undefined : clean(data.event, 32), page = data.page == null ? undefined : clean(data.page, 32), feature = data.feature == null ? undefined : clean(data.feature, 32), eventState = data.state == null ? undefined : clean(data.state, 16);
   const boundedNumber = (value, max) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(max, Number(value))) : undefined;
   const durationSec = boundedNumber(data.durationSec, 86400), activeSeconds = boundedNumber(data.activeSeconds, 86400), onlineSeconds = boundedNumber(data.onlineSeconds, 86400);
   const pageViews = boundedNumber(data.pageViews, 100000), visibilityChanges = boundedNumber(data.visibilityChanges, 100000), onlineEvents = boundedNumber(data.onlineEvents, 100000), offlineEvents = boundedNumber(data.offlineEvents, 100000);
@@ -1348,7 +1349,7 @@ function telemetryPayload(data, request) {
   const timestamp = value => { const text = String(value || ""); if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(text)) return undefined; const parsed = Date.parse(text); return Number.isFinite(parsed) ? new Date(parsed).toISOString() : undefined; };
   const sessionStartedAt = timestamp(data.sessionStartedAt), sessionEndedAt = timestamp(data.sessionEndedAt);
   return { at: new Date().toISOString(), manufacturer: readableManufacturer, model: readableModel, ...(modelCode !== "unknown" ? { modelCode } : {}), ...(mapped?.displayName ? { displayName: mapped.displayName } : {}), platform, os, appVersion,
-    ...(event ? { event } : {}), ...(page ? { page } : {}), ...(durationSec !== undefined ? { durationSec } : {}),
+    ...(event ? { event } : {}), ...(page ? { page } : {}), ...(feature ? { feature } : {}), ...(eventState ? { state: eventState } : {}), ...(durationSec !== undefined ? { durationSec } : {}),
     ...(activeSeconds !== undefined ? { activeSeconds } : {}), ...(onlineSeconds !== undefined ? { onlineSeconds } : {}),
     ...(pageViews !== undefined ? { pageViews } : {}), ...(visibilityChanges !== undefined ? { visibilityChanges } : {}),
     ...(onlineEvents !== undefined ? { onlineEvents } : {}), ...(offlineEvents !== undefined ? { offlineEvents } : {}),
@@ -1361,7 +1362,7 @@ function telemetryPayload(data, request) {
     ...(viewport ? { viewport } : {}), ...(connection ? { connection } : {}),
     ...(Number.isFinite(Number(data.deviceMemory)) ? { deviceMemory: Math.max(0, Math.min(64, Number(data.deviceMemory))) } : {}),
     ...(Number.isFinite(Number(data.hardwareConcurrency)) ? { hardwareConcurrency: Math.max(0, Math.min(128, Number(data.hardwareConcurrency))) } : {}),
-    ...(clean(data.colorScheme, 8) ? { colorScheme: clean(data.colorScheme, 8) } : {}), ...(screen ? { screen } : {}), source: "opsucht-radar" };
+    ...(clean(data.colorScheme, 8) ? { colorScheme: clean(data.colorScheme, 8) } : {}), ...(data.reducedMotion !== undefined ? { reducedMotion: Boolean(data.reducedMotion) } : {}), ...(screen ? { screen } : {}), source: "opsucht-radar" };
 }
 
 function saveTelemetry(data, request) {
