@@ -1339,6 +1339,8 @@ function telemetryPayload(data, request) {
   const readableModel = mapped?.model || model;
   const viewport = data.viewport && typeof data.viewport === "object" ? { width: Math.max(0, Math.min(10000, Number(data.viewport.width) || 0)), height: Math.max(0, Math.min(10000, Number(data.viewport.height) || 0)) } : undefined;
   const connection = data.connection && typeof data.connection === "object" ? { effectiveType: clean(data.connection.effectiveType, 16), saveData: Boolean(data.connection.saveData) } : undefined;
+  const sessionBucketRaw = String(data.sessionBucket || "").trim().toLowerCase();
+  const sessionBucket = /^[a-z0-9][a-z0-9_-]{5,47}$/.test(sessionBucketRaw) ? sessionBucketRaw : "legacy";
   const event = data.event == null ? undefined : clean(data.event, 32), page = data.page == null ? undefined : clean(data.page, 32), feature = data.feature == null ? undefined : clean(data.feature, 32), eventState = data.state == null ? undefined : clean(data.state, 16);
   const boundedNumber = (value, max) => Number.isFinite(Number(value)) ? Math.max(0, Math.min(max, Number(value))) : undefined;
   const durationSec = boundedNumber(data.durationSec, 86400), activeSeconds = boundedNumber(data.activeSeconds, 86400), onlineSeconds = boundedNumber(data.onlineSeconds, 86400);
@@ -1359,7 +1361,8 @@ function telemetryPayload(data, request) {
     ...(sessionStartedAt ? { sessionStartedAt } : {}), ...(sessionEndedAt ? { sessionEndedAt } : {}),
     ...(clean(data.browser, 16) ? { browser: clean(data.browser, 16) } : {}), ...(data.mobile !== undefined ? { mobile: Boolean(data.mobile) } : {}),
     ...(clean(data.locale, 16) ? { locale: clean(data.locale, 16) } : {}), ...(clean(data.timezone, 48) ? { timezone: clean(data.timezone, 48) } : {}),
-    ...(viewport ? { viewport } : {}), ...(connection ? { connection } : {}),
+    ...(viewport ? { viewport } : {}), ...(connection ? { connection } : {}), ...(data.mobileData !== undefined ? { mobileData: Boolean(data.mobileData) } : {}),
+    ...(data.dataSaver !== undefined ? { dataSaver: Boolean(data.dataSaver) } : {}), ...(sessionBucket ? { sessionBucket } : {}),
     ...(Number.isFinite(Number(data.deviceMemory)) ? { deviceMemory: Math.max(0, Math.min(64, Number(data.deviceMemory))) } : {}),
     ...(Number.isFinite(Number(data.hardwareConcurrency)) ? { hardwareConcurrency: Math.max(0, Math.min(128, Number(data.hardwareConcurrency))) } : {}),
     ...(clean(data.colorScheme, 8) ? { colorScheme: clean(data.colorScheme, 8) } : {}), ...(data.reducedMotion !== undefined ? { reducedMotion: Boolean(data.reducedMotion) } : {}), ...(screen ? { screen } : {}), source: "opsucht-radar" };
@@ -1368,16 +1371,23 @@ function telemetryPayload(data, request) {
 function saveTelemetry(data, request) {
   const payload = telemetryPayload(data, request);
   const manufacturer = telemetryPathPart(payload.manufacturer), model = telemetryPathPart(payload.model);
-  const folder = path.join(TELEMETRY_DIR, manufacturer, model);
-  fs.mkdirSync(folder, { recursive: true, mode: 0o750 });
   const day = payload.at.slice(0, 10);
-  const file = path.join(folder, `${day}.jsonl`);
+  const bucket = telemetryPathPart(payload.sessionBucket, "legacy");
+  const folder = path.join(TELEMETRY_DIR, manufacturer, model, day);
+  fs.mkdirSync(folder, { recursive: true, mode: 0o750 });
+  const eventFile = path.join(folder, `events-${bucket}.jsonl`);
+  const summaryFile = path.join(folder, `summary-${bucket}.jsonl`);
   const line = `${JSON.stringify(payload)}\n`;
-  // A daily per-model file avoids rewriting or replacing existing data. Keep
-  // a conservative cap so an abusive client cannot grow one file forever.
-  if (fs.existsSync(file) && fs.statSync(file).size > 10 * 1024 * 1024) throw Object.assign(new Error("Telemetry-Datei ist vorübergehend voll."), { status: 503 });
-  fs.appendFileSync(file, line, { encoding: "utf8", mode: 0o640 });
-  return { manufacturer, model, recorded_at: payload.at };
+  // Each locally generated bucket gets its own files. This keeps simultaneous
+  // browsers/devices separate without storing an IP, account, cookie or URL.
+  if (fs.existsSync(eventFile) && fs.statSync(eventFile).size > 5 * 1024 * 1024) throw Object.assign(new Error("Telemetry-Datei ist vorübergehend voll."), { status: 503 });
+  fs.appendFileSync(eventFile, line, { encoding: "utf8", mode: 0o640 });
+  if (["session_end", "performance"].includes(payload.event)) {
+    if (fs.existsSync(summaryFile) && fs.statSync(summaryFile).size > 1024 * 1024) throw Object.assign(new Error("Telemetry-Zusammenfassung ist vorübergehend voll."), { status: 503 });
+    const summary = { at: payload.at, sessionBucket: bucket, event: payload.event, manufacturer, model, displayName: payload.displayName, activeSeconds: payload.activeSeconds ?? 0, onlineSeconds: payload.onlineSeconds ?? 0, pageViews: payload.pageViews ?? 0, apiStatus: payload.apiStatus, apiDurationMs: payload.apiDurationMs, loadMs: payload.loadMs, domReadyMs: payload.domReadyMs, transferKb: payload.transferKb, mobileData: payload.mobileData ?? false };
+    fs.appendFileSync(summaryFile, `${JSON.stringify(summary)}\n`, { encoding: "utf8", mode: 0o640 });
+  }
+  return { manufacturer, model, session_bucket: bucket, recorded_at: payload.at, event_file: path.relative(DATA_DIR, eventFile), summary_file: path.relative(DATA_DIR, summaryFile) };
 }
 
 function apiData(request,pathname){
