@@ -34,6 +34,8 @@ Für deine Zuweisung ist die öffentliche Adresse `http://45.93.249.214:63816`. 
 
 Die öffentliche Startseite enthält keine persönliche Alarm-/Webhook-Oberfläche. Private API-Routen und Änderungen sind geschützt. Die Seite bindet standardmäßig an `127.0.0.1`; ein externer Bind an `0.0.0.0` aktiviert automatisch den öffentlichen Read-only-Modus.
 
+Das Owner-Panel bleibt auch auf einem öffentlichen Host unter `/owner` erreichbar. Es zeigt nur die Steueroberfläche; Regeln, Wartungsmodus und Einstellungen akzeptieren weiterhin ausschließlich den `ADMIN_TOKEN`.
+
 ## Sammler und Datenspeicherung
 
 Der Node-Prozess betreibt **Website, API und Collector gemeinsam**:

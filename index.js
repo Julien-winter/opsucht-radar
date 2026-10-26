@@ -1530,6 +1530,7 @@ async function handleRequest(request,response){
   }
   if(request.method==="GET"||request.method==="HEAD"){
     if(pathname==="/"){serveFile(response,publicMode()?path.join(ROOT,"static","index.html"):path.join(ROOT,"templates","owner.html"),request.method==="HEAD");return;}
+    if(pathname==="/owner"||pathname==="/owner/"){serveFile(response,path.join(ROOT,"templates","owner.html"),request.method==="HEAD");return;}
     if(pathname.startsWith("/static/")){
       let relative; try { relative=decodeURIComponent(pathname.slice("/static/".length)); } catch { jsonResponse(response,{error:"Ungültiger URL-Parameter"},400); return; }
       if(!relative||relative.includes("\0")){jsonResponse(response,{error:"Not found"},404);return;}

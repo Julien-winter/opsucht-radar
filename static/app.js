@@ -1,4 +1,5 @@
 const $ = s => document.querySelector(s);
+const ownerPanel = globalThis.__OWNER_PANEL__ === true;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Reuse one formatter: search renders call num() hundreds of times per pass.
 const numberFormatter = new Intl.NumberFormat('de-DE', {maximumFractionDigits:2});
@@ -244,9 +245,9 @@ function renderStatus() {
   } else if(banner) banner.hidden=true;
   const stale=!s.auctions_updated || Date.now()/1000-s.auctions_updated>90;
   const ownerTab=document.querySelector('nav [data-page="rules"]');
-  if(ownerTab) ownerTab.hidden=Boolean(s.public_site);
-  for(const id of ['owner-recent-alerts','owner-rule-preview','owner-manage-button']){const el=$('#'+id);if(el)el.hidden=Boolean(s.public_site);}
-  if(s.public_site&&$('#hero-description')) $('#hero-description').textContent='Öffentliche Live-Daten zu Marktpreisen, Auktionen, Itemvarianten und Händlerkursen. Deine persönlichen Alerts und die Webhook-Verbindung bleiben privat.';
+  if(ownerTab) ownerTab.hidden=Boolean(s.public_site&&!ownerPanel);
+  for(const id of ['owner-recent-alerts','owner-rule-preview','owner-manage-button']){const el=$('#'+id);if(el)el.hidden=Boolean(s.public_site&&!ownerPanel);}
+  if(s.public_site&&!ownerPanel&&$('#hero-description')) $('#hero-description').textContent='Öffentliche Live-Daten zu Marktpreisen, Auktionen, Itemvarianten und Händlerkursen. Deine persönlichen Alerts und die Webhook-Verbindung bleiben privat.';
   const maintenanceToggle=$('#maintenance-enabled'),maintenanceMessage=$('#maintenance-message'),maintenanceTag=$('#maintenance-status');if(maintenanceToggle&&s.maintenance){maintenanceToggle.checked=Boolean(s.maintenance.enabled);maintenanceMessage.value=s.maintenance.message||'';maintenanceTag.textContent=s.maintenance.enabled?'AKTIV':'AUS';maintenanceTag.classList.toggle('tag-active',Boolean(s.maintenance.enabled));}
   $('#live').textContent=s.stream ? '● DATEN AKTUELL' : stale ? '● VERBINDUNG PRÜFEN' : '● AKTUALISIERUNG AKTIV';
   $('#side-status').textContent=s.stream ? 'Auktionsfeed verbunden' : 'Aktualisierung / Wiederverbindung';
@@ -627,7 +628,7 @@ async function load() {
       try{await loadUserData();}
       catch(userError){if(!['market','abc'].includes(pageAtStart))throw userError;}
     }
-    if((pageAtStart==='overview'||pageAtStart==='rules')&&!state.status.public_site){
+    if((pageAtStart==='overview'||pageAtStart==='rules')&&(ownerPanel||!state.status.public_site)&&state.token){
       state.alerts=arrayOrEmpty(await api('alerts'));if($('#recent-alerts'))$('#recent-alerts').innerHTML=alertTable(state.alerts.slice(0,5));
       if(pageAtStart==='rules'){state.rules=arrayOrEmpty(await api('rules'));if(state.page===pageAtStart)renderRules();}
     }
