@@ -9,6 +9,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Window;
 import android.view.View;
 import android.webkit.WebChromeClient;
@@ -39,10 +41,24 @@ public final class MainActivity extends Activity {
     private WebView webView;
     private SwipeRefreshLayout refreshLayout;
     private TextView offlineView;
+    private View loadingView;
     private FrameLayout rootLayout;
     private final ExecutorService updateExecutor = Executors.newSingleThreadExecutor();
     private boolean updateCheckStarted;
     private boolean offlineFallbackAttempted;
+    private boolean loadFinished;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable loadTimeout = () -> {
+        if (!loadFinished && webView != null) {
+            if (!offlineFallbackAttempted) {
+                offlineFallbackAttempted = true;
+                webView.getSettings().setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+                webView.reload();
+            } else {
+                showOffline();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle state) {
@@ -53,6 +69,7 @@ public final class MainActivity extends Activity {
         refreshLayout = findViewById(R.id.refresh_layout);
         webView = findViewById(R.id.web_view);
         offlineView = findViewById(R.id.offline_view);
+        loadingView = findViewById(R.id.loading_view);
 
         // Android 15 enforces edge-to-edge for targetSdk 35. Apply system-bar
         // insets to the root so the website header never sits below the clock.
@@ -64,6 +81,7 @@ public final class MainActivity extends Activity {
         ViewCompat.requestApplyInsets(rootLayout);
 
         WebSettings settings = webView.getSettings();
+        webView.setBackgroundColor(getColor(R.color.radar_background));
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
@@ -85,8 +103,18 @@ public final class MainActivity extends Activity {
                 return openExternalIfNeeded(Uri.parse(url));
             }
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                loadFinished = false;
+                loadingView.setVisibility(View.VISIBLE);
                 offlineView.setVisibility(View.GONE);
-                offlineFallbackAttempted = false;
+                mainHandler.removeCallbacks(loadTimeout);
+                mainHandler.postDelayed(loadTimeout, 12000);
+            }
+            @Override public void onPageFinished(WebView view, String url) {
+                loadFinished = true;
+                mainHandler.removeCallbacks(loadTimeout);
+                loadingView.setVisibility(View.GONE);
+                offlineView.setVisibility(View.GONE);
+                refreshLayout.setRefreshing(false);
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
@@ -102,7 +130,7 @@ public final class MainActivity extends Activity {
             }
         });
 
-        refreshLayout.setOnRefreshListener(() -> webView.reload());
+        refreshLayout.setOnRefreshListener(this::retryLoad);
         webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> refreshLayout.setEnabled(scrollY <= 0));
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> openExternalIfNeeded(Uri.parse(url)));
         webView.loadUrl(BuildConfig.RADAR_URL);
@@ -120,9 +148,20 @@ public final class MainActivity extends Activity {
     }
 
     private void showOffline() {
+        loadFinished = false;
+        mainHandler.removeCallbacks(loadTimeout);
+        loadingView.setVisibility(View.GONE);
         refreshLayout.setRefreshing(false);
         offlineView.setVisibility(View.VISIBLE);
-        offlineView.setOnClickListener(v -> webView.reload());
+        offlineView.setOnClickListener(v -> retryLoad());
+    }
+
+    private void retryLoad() {
+        if (webView == null) return;
+        offlineFallbackAttempted = false;
+        loadFinished = false;
+        webView.getSettings().setCacheMode(isNetworkAvailable() ? WebSettings.LOAD_DEFAULT : WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        webView.loadUrl(BuildConfig.RADAR_URL);
     }
 
     private boolean isNetworkAvailable() {
@@ -136,10 +175,10 @@ public final class MainActivity extends Activity {
         return manager.getActiveNetworkInfo() != null && manager.getActiveNetworkInfo().isConnected();
     }
 
-    @Override protected void onResume() { super.onResume(); if (refreshLayout != null) refreshLayout.setRefreshing(false); }
+    @Override protected void onResume() { super.onResume(); if (refreshLayout != null) refreshLayout.setRefreshing(false); if (offlineView != null && offlineView.getVisibility() == View.VISIBLE && isNetworkAvailable()) retryLoad(); }
     @Override protected void onPause() { super.onPause(); if (webView != null) webView.onPause(); }
     @Override protected void onStop() { if (webView != null) webView.onPause(); super.onStop(); }
-    @Override protected void onDestroy() { updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
+    @Override protected void onDestroy() { mainHandler.removeCallbacks(loadTimeout); updateExecutor.shutdownNow(); if (webView != null) webView.destroy(); super.onDestroy(); }
 
     /** Checks release metadata only; installation stays with the user. */
     private void checkForUpdate() {

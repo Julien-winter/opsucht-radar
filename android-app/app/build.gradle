@@ -15,8 +15,8 @@ android {
         applicationId 'net.opsucht.radar'
         minSdk 23
         targetSdk 35
-        versionCode 3
-        versionName '1.0.2'
+        versionCode 4
+        versionName '1.0.3'
         buildConfigField 'String', 'RADAR_URL', '"' + radarUrl.replace('\\', '\\\\').replace('"', '\\"') + '"'
         buildConfigField 'String', 'UPDATE_API', '"' + updateApi.replace('\\', '\\\\').replace('"', '\\"') + '"'
     }
