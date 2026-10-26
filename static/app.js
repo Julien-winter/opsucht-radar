@@ -43,7 +43,25 @@ const state = {page:'overview', market:[], abcPrices:[], abcCategory:'', abcQuan
 const PRICE_CACHE_PREFIX='opsucht-price-cache-v1:';
 function readPriceCache(key){try{const raw=localStorage.getItem(PRICE_CACHE_PREFIX+key);const parsed=JSON.parse(raw||'');if(!Array.isArray(parsed?.data)||!Number.isFinite(Number(parsed.savedAt)))return null;return {data:parsed.data,savedAt:Number(parsed.savedAt)};}catch{return null;}}
 function writePriceCache(key,data){if(!Array.isArray(data)||!data.length)return;try{localStorage.setItem(PRICE_CACHE_PREFIX+key,JSON.stringify({savedAt:Date.now(),data}));}catch{}}
-function renderCacheNotice(pageName){const host=document.querySelector('#'+pageName);if(!host)return;let note=host.querySelector('.offline-cache-note');const cachedAt=state.cacheMeta[pageName];if(!cachedAt){if(note)note.remove();return;}if(!note){note=document.createElement('div');note.className='offline-cache-note';const anchor=host.querySelector('.toolbar')||host.firstElementChild;host.insertBefore(note,anchor||null);}note.textContent=`Offline gespeicherte Preisdaten · zuletzt online ${date(cachedAt)}. Aktualisieren sobald WLAN verfügbar ist.`;}
+function renderCacheNotice(pageName){const host=document.querySelector('#'+pageName);if(!host)return;let note=host.querySelector('.offline-cache-note');const cachedAt=state.cacheMeta[pageName];if(!cachedAt){if(note)note.remove();return;}if(!note){note=document.createElement('div');note.className='offline-cache-note';const anchor=host.querySelector('.toolbar')||host.firstElementChild;host.insertBefore(note,anchor||null);}note.textContent=`Offline gespeicherte Daten · zuletzt online ${date(cachedAt)}. Sobald WLAN verfügbar ist, werden Markt, ABC und OPSHARD-Kurse automatisch aktualisiert.`;}
+function hydratePublicPriceCaches(){
+  for(const key of ['market','abc','rates']){
+    const cached=readPriceCache(key);if(!cached)continue;
+    if(key==='market'){state.market=cached.data;state.cacheMeta.market=cached.savedAt;state.loadedAt.market=cached.savedAt;}
+    else if(key==='abc'){state.abcPrices=cached.data;state.cacheMeta.abc=cached.savedAt;state.loadedAt.abc=cached.savedAt;}
+    else {state.rates=cached.data;state.cacheMeta.rates=cached.savedAt;state.loadedAt.rates=cached.savedAt;}
+  }
+}
+let publicPriceWarmup=false;
+function preloadPublicPrices(){
+  if(publicPriceWarmup||navigator.onLine===false)return;
+  publicPriceWarmup=true;
+  Promise.allSettled([api('market'),api('abc-prices'),api('rates')]).then(([market,abc,rates])=>{
+    if(market.status==='fulfilled')writePriceCache('market',market.value);
+    if(abc.status==='fulfilled')writePriceCache('abc',abc.value);
+    if(rates.status==='fulfilled')writePriceCache('rates',rates.value);
+  }).finally(()=>{publicPriceWarmup=false;});
+}
 
 // Optional telemetry is opt-in and intentionally separate from login state.
 // Events are coarse, non-identifying and queued locally while offline.
@@ -183,12 +201,12 @@ function page(name, options={}) {
     // Reuse the last complete render immediately while the refresh runs in the
     // background. This makes tab buttons feel instant even for the large
     // catalog/value payloads.
-    if(name==='market'&&state.market.length)renderMarket();
-    else if(name==='abc'&&state.abcPrices.length)renderAbc();
+    if(name==='market'&&state.market.length){renderMarket();renderCacheNotice('market');}
+    else if(name==='abc'&&state.abcPrices.length){renderAbc();renderCacheNotice('abc');}
     else if(name==='auctions'&&state.auctions.length)renderAuctions();
     else if(name==='catalog'&&state.catalog.length)renderCatalog();
     else if(name==='values'&&state.values.length)renderValues();
-    else if(name==='merchant'&&state.rates.length)renderRates();
+    else if(name==='merchant'&&state.rates.length){renderRates();renderCacheNotice('merchant');}
     load().catch(e=>toast(e.message,true));
   }
 }
@@ -214,7 +232,7 @@ function renderStatus() {
   let sponsor=document.querySelector('#sponsor-slot');
   if(s.sponsor?.enabled){
     if(!sponsor){sponsor=document.createElement('article');sponsor.id='sponsor-slot';sponsor.className='sponsor-card';const overview=document.querySelector('#overview');overview?.append(sponsor);}
-    sponsor.innerHTML=`<small>COMMUNITY-SPONSOR</small><h3>${esc(s.sponsor.title||'Unterstützer')}</h3><p>${esc(s.sponsor.text||'Unterstützt OPSUCHT Market')}</p><a href="${esc(s.sponsor.url)}" target="_blank" rel="noopener sponsored">Mehr erfahren ↗</a>`;
+    sponsor.innerHTML=`<small>WERBUNG · AFFILIATE</small><h3>${esc(s.sponsor.title||'Unterstützer')}</h3><p>${esc(s.sponsor.text||'Unterstützt OPSUCHT Market')}</p><a href="${esc(s.sponsor.url)}" target="_blank" rel="noopener sponsored">Mehr erfahren ↗</a>`;
     sponsor.hidden=false;
   } else if(sponsor) sponsor.hidden=true;
   $('#stats').innerHTML=[['Marktitems',s.market_items ?? 0,'Alle handelbaren Materialien'],['Aktive Auktionen',s.active_auctions ?? 0,'Live + Snapshot-Abgleich'],['Bestätigte Verkäufe',s.sales ?? 0,'Grundlage deiner Itemwerte'],['Verlaufspunkte',s.history_points ?? 0,'Historische Trades archiviert']].map(([label,value,caption])=>`<div class="stat"><small>${label}</small><b>${num(value)}</b><span>${caption}</span></div>`).join('');
@@ -590,8 +608,8 @@ async function load() {
     }
     if(pageAtStart==='overview'){state.auctions=arrayOrEmpty(await api('auctions'));state.loadedAt.auctions=Date.now();if(state.page===pageAtStart)renderOverviewHighlights();}
     if(pageAtStart==='market'||pageAtStart==='abc'||pageAtStart==='merchant'){
-      const [marketResult,abcResult]=await Promise.allSettled([api('market'),api('abc-prices')]);
-      const marketCache=readPriceCache('market'),abcCache=readPriceCache('abc');
+      const [marketResult,abcResult,ratesResult]=await Promise.allSettled([api('market'),api('abc-prices'),api('rates')]);
+      const marketCache=readPriceCache('market'),abcCache=readPriceCache('abc'),ratesCache=readPriceCache('rates');
       const marketOk=marketResult.status==='fulfilled'&&Array.isArray(marketResult.value);
       const abcOk=abcResult.status==='fulfilled'&&Array.isArray(abcResult.value);
       if(marketOk){state.market=marketResult.value;state.cacheMeta.market=0;writePriceCache('market',state.market);state.loadedAt.market=Date.now();}
@@ -600,14 +618,19 @@ async function load() {
       if(abcOk){state.abcPrices=abcResult.value;state.cacheMeta.abc=0;writePriceCache('abc',state.abcPrices);state.loadedAt.abc=Date.now();}
       else if(abcCache){state.abcPrices=abcCache.data;state.cacheMeta.abc=abcCache.savedAt;state.loadedAt.abc=abcCache.savedAt;}
       else state.abcPrices=[];
+      const ratesOk=ratesResult.status==='fulfilled'&&Array.isArray(ratesResult.value);
+      if(ratesOk){state.rates=ratesResult.value;state.cacheMeta.rates=0;writePriceCache('rates',state.rates);state.loadedAt.rates=Date.now();}
+      else if(ratesCache){state.rates=ratesCache.data;state.cacheMeta.rates=ratesCache.savedAt;state.loadedAt.rates=ratesCache.savedAt;}
+      else state.rates=[];
       if(state.page===pageAtStart&&pageAtStart==='market'){
         renderMarket();renderCacheNotice('market');
       }else if(state.page===pageAtStart&&pageAtStart==='abc'){
         renderAbc();renderCacheNotice('abc');
-      }else if(pageAtStart==='merchant'){state.rates=arrayOrEmpty(await api('rates'));if(state.page===pageAtStart)renderRates();}
+      }else if(pageAtStart==='merchant'){if(state.page===pageAtStart){renderRates();renderCacheNotice('merchant');}}
       if(!marketOk&&!abcOk&&(marketCache||abcCache))toast('Keine Verbindung. Zuletzt gespeicherte Markt- und ABC-Preise werden angezeigt.');
       if(!marketOk&&!marketCache&&marketResult.status==='rejected')throw marketResult.reason;
       if(!abcOk&&!abcCache&&abcResult.status==='rejected'&&pageAtStart==='abc')throw abcResult.reason;
+      if(!ratesOk&&!ratesCache&&ratesResult.status==='rejected'&&pageAtStart==='merchant')throw ratesResult.reason;
     }
     if(pageAtStart==='auctions'){
       const [auctions,categories]=await Promise.all([api('auctions'),api('auction-categories')]);
@@ -686,9 +709,11 @@ if($('#settings-form'))$('#settings-form').onsubmit=async e=>{e.preventDefault()
 startCountdownTimer();
 enhanceAccessibility();
 initPrivacyControls();
+hydratePublicPriceCaches();
 const initialAuction=new URLSearchParams(location.search).get('auction');
 if(initialAuction)page('auctions',{load:false});
-load().then(async()=>{if(initialAuction){if(!state.auctions.some(a=>a.uid===initialAuction)){const exact=await api('auctions?uid='+encodeURIComponent(initialAuction));if(exact.length)state.auctions.push(exact[0]);}renderAuctions();showAuction(initialAuction);}}).catch(e=>toast(e.message,true));
+load().then(async()=>{preloadPublicPrices();if(initialAuction){if(!state.auctions.some(a=>a.uid===initialAuction)){const exact=await api('auctions?uid='+encodeURIComponent(initialAuction));if(exact.length)state.auctions.push(exact[0]);}renderAuctions();showAuction(initialAuction);}}).catch(e=>toast(e.message,true));
+addEventListener('online',()=>preloadPublicPrices(),{passive:true});
 // Do not replace large result grids while a user is typing or selecting a filter.
 // The next interval refreshes the data once focus is released.
 setInterval(()=>{if(!document.hidden&&!document.querySelector('input:focus,select:focus,textarea:focus'))load().catch(e=>toast(e.message,true));},30000);

@@ -1,6 +1,6 @@
 // Bump this whenever the shell changes. Cache-first assets otherwise keep an
 // old app.js in Android WebViews and can hide new consent/UI fixes.
-const CACHE = 'opsucht-radar-shell-v3';
+const CACHE = 'opsucht-radar-shell-v4';
 const SHELL = [
   '/',
   '/static/index.html',
